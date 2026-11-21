@@ -1,0 +1,10 @@
+CÁCH DÙNG VỚI ANTIGRAVITY
+
+1. Tạo hoặc mở một thư mục dự án riêng cho web luyện thi trong Antigravity.
+2. Chép Bo-cau-hoi-Claude-Developer-Foundations.docx và questions.json vào thư mục đó.
+3. Mở prompt-antigravity.txt, sao chép toàn bộ nội dung rồi dán vào chat của Antigravity.
+4. Đính kèm hoặc trỏ Antigravity đến hai file trên. Cho nó triển khai theo prompt.
+
+File Word dùng để đọc và tự học. File JSON chứa cùng ngân hàng câu hỏi ở dạng có cấu trúc; đây là đầu vào thuận tiện nhất để web nhập đủ dữ liệu.
+
+Phạm vi: 110 câu tại https://tstudy.vercel.app/study/ccdv-f, revision 2, thu thập ngày 21/11/2026. Có 102 câu chọn một và 8 câu chọn nhiều đáp án. Giữ nguyên nội dung tiếng Anh, đáp án và giải thích của nguồn. Đây là tài liệu luyện tập tham khảo; đáp án chưa được thẩm định độc lập và không phải xác nhận về ngân hàng đề thi chính thức.

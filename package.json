@@ -1,0 +1,37 @@
+{
+  "name": "ccdv-f-study-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ứng dụng tự học và luyện thi Claude Certified Developer – Foundations (110 câu hỏi thực tế từ T-Study)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "validate": "vitest run src/__tests__/dataset.test.ts",
+    "check": "npm run typecheck && npm run test:run && npm run build"
+  },
+  "dependencies": {
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.5"
+  }
+}

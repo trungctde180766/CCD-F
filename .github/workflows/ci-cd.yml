@@ -1,0 +1,96 @@
+name: CI/CD — Build, Test & Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+    name: Validate Data, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate 110-question dataset integrity
+        run: npm run validate
+
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run unit & integration test suite
+        run: npm run test:run
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Upload production build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-bundle
+          path: dist
+          retention-days: 7
+
+  deploy-vercel:
+    name: Deploy to Vercel
+    needs: verify-and-build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: Production
+      url: ${{ steps.deploy.outputs.deployment_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check Vercel Secrets & Deploy via Vercel CLI
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::notice::VERCEL_TOKEN, VERCEL_ORG_ID, or VERCEL_PROJECT_ID secrets are not configured in GitHub Actions. If your repo is connected directly to Vercel Git Integration, Vercel will automatically deploy on push. To deploy via GitHub Actions CLI, add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID to Repository Secrets."
+            exit 0
+          fi
+          npm install --global vercel@latest
+          if [ "${{ github.ref }}" == "refs/heads/main" ] || [ "${{ github.ref }}" == "refs/heads/master" ]; then
+            vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+            vercel build --prod --token="$VERCEL_TOKEN"
+            DEPLOY_URL=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          else
+            vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+            vercel build --token="$VERCEL_TOKEN"
+            DEPLOY_URL=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          fi
+          echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed successfully to: $DEPLOY_URL"

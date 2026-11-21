@@ -1,0 +1,66 @@
+Hãy xây dựng hoàn chỉnh một web tự học và luyện thi Claude Certified Developer – Foundations cho cá nhân tôi. Tiến hành viết code, nhập dữ liệu thật, chạy và kiểm tra ứng dụng; không dừng ở bản kế hoạch hay giao diện mẫu.
+
+TÀI LIỆU ĐÍNH KÈM
+1. Bo-cau-hoi-Claude-Developer-Foundations.docx: tài liệu đọc gồm toàn bộ 110 câu, lựa chọn, đáp án, giải thích và giải thích riêng theo lựa chọn khi nguồn có.
+2. questions.json: chính bộ dữ liệu trên dưới dạng cấu trúc, được trích từ https://tstudy.vercel.app/study/ccdv-f, revision 2, ngày 21/11/2026. Ưu tiên dùng file JSON để nhập nội dung; dùng Word để kiểm tra nội dung khi cần. Không crawl lại website khi đã có dữ liệu đính kèm.
+
+KẾT QUẢ MONG MUỐN
+Một ứng dụng chạy được với đủ 110 câu thực tế: 102 single_choice và 8 multiple_choice. Giao diện tiếng Việt; câu hỏi, các phương án và giải thích giữ nguyên tiếng Anh. Học bằng cách tự trả lời, kiểm tra đáp án, đọc giải thích, ôn câu sai và theo dõi tiến bộ. Không bắt buộc đăng nhập và không cần API AI trả phí để dùng các chức năng chính.
+
+CÔNG NGHỆ
+Nếu thư mục đã có ứng dụng, đọc và tiếp tục theo cấu trúc hiện tại. Nếu là dự án mới, dùng React + TypeScript + Vite, Tailwind CSS và thư viện biểu đồ nhẹ nếu cần. Lưu ngân hàng câu hỏi trong dự án và tiến độ trong localStorage có version. Có package scripts cho dev, build và kiểm tra. Tách dữ liệu nguồn, logic chấm điểm, logic phiên học và UI. Không thêm backend khi chưa có nhu cầu. Không gọi API bên ngoài để chấm đáp án.
+
+NHẬP DỮ LIỆU VÀ GIỮ NGUYÊN NGUỒN
+- Đọc schema thật trước khi viết importer. Cấu trúc gốc là object có schemaVersion, id, revision, title, topics, contexts, questions, sources, conversion và extraction. Mảng câu nằm tại root.questions, không phải root trực tiếp.
+- Mỗi câu có id, topicId, title, prompt, contextId, difficulty, interaction, explanation, optionExplanations, source và review.
+- prompt và explanation là mảng block. Render đầy đủ paragraph.text với xuống dòng, heading.text/level, list.items/ordered. Không ép mảng block thành chuỗi [object Object]. Render nội dung như text an toàn; không dùng dangerouslySetInnerHTML cho dữ liệu nhập.
+- interaction.type là single_choice hoặc multiple_choice; options là mảng {id, label}; correctOptionIds là mảng ID lựa chọn. Không coi ID là chỉ số mảng.
+- optionExplanations là mảng {optionId, content}, trong đó content là mảng block. Hiển thị đủ các lý do nguồn đã cung cấp, kể cả lý do lựa chọn sai.
+- Giữ mã ccdv-f-q001 đến ccdv-f-q110 và thứ tự gốc. Không bỏ các câu na ná nhau; không tạo thêm câu, thay đáp án hoặc tự viết lời giải rồi trình bày như nội dung của nguồn.
+- Không tự suy đoán URL cho các tên tài liệu trong Learn more. Chỉ biến thành liên kết nếu có URL thật trong dữ liệu.
+- difficulty đang là unspecified: hiển thị “Chưa phân loại”, không tự gán độ khó như dữ liệu đã xác thực. Ngân hàng gốc có một topic chung; nếu tạo thêm tag học tập bằng quy tắc, lưu riêng dưới derivedTags, ghi rõ “Nhãn hỗ trợ học tập” và giữ topicId gốc.
+- Nếu nguồn có ghi chú, mâu thuẫn đáp án hoặc review chưa sẵn sàng, giữ và hiển thị ghi chú. Không âm thầm sửa đáp án. Các câu và đáp án được giữ theo T-Study, chưa được thẩm định độc lập.
+- Khi nhập, kiểm tra: đúng 110 câu; 110 ID duy nhất; đúng 102 single_choice và 8 multiple_choice; options không trùng ID; mọi correctOptionIds tồn tại trong options; câu chọn một có đúng một đáp án; câu nhiều đáp án có nhiều hơn một; prompt và explanation không rỗng; không còn chuỗi tham chiếu nội bộ kiểu $13 thay cho nội dung.
+- Nếu thiếu JSON thì trích từ DOCX một cách có cấu trúc và lập báo cáo số lượng để kiểm tra, tuyệt đối không dùng dữ liệu mẫu thay thế. Nếu có đủ cả hai file, không yêu cầu tôi dán lại từng câu.
+
+CÁC MÀN HÌNH VÀ CHỨC NĂNG
+1. Tổng quan
+Hiển thị tổng 110 câu, số chưa làm/đã làm, độ chính xác lần đầu, độ chính xác lượt gần nhất, số câu đánh dấu, số câu đến hạn ôn và lịch sử phiên. Phân biệt “đã xem”, “đã trả lời” và “đã trả lời đúng”; không coi đã mở câu là đã nắm kiến thức. Có nút Tiếp tục học khôi phục đúng phiên đang dở.
+
+2. Học từng câu
+Danh sách câu, tìm theo nội dung và mã, lọc chưa làm/câu sai/câu đánh dấu/đến hạn ôn. Câu chọn một dùng radio; câu nhiều đáp án dùng checkbox và nhãn rõ “Chọn nhiều đáp án”. Chọn rồi bấm Kiểm tra mới chấm; sau khi chấm khóa lựa chọn của lượt đó và cho phép Làm lại thành lượt mới. Hiện lựa chọn của tôi, đáp án đúng, giải thích tổng, Learn more và lý do từng lựa chọn nếu có. Cho đánh dấu và ghi chú cá nhân theo ID câu.
+Mặc định ẩn đáp án và toàn bộ giải thích trước khi kiểm tra. Không để đáp án lộ qua chú thích, màu lựa chọn, nhãn trợ năng hay bảng đáp án trong DOM trước khi trả lời. Nút Xem đáp án trước được phép trong chế độ học nhưng cần ghi nhận là đã xem lời giải, không tính là trả lời đúng không trợ giúp. Dữ liệu tĩnh phía client vẫn có thể đọc bằng công cụ phát triển; không hứa bảo mật ngân hàng đề.
+
+3. Luyện tập
+Chọn 10, 20, 30, 50 câu hoặc tự nhập từ 1 đến 110, chọn toàn bộ/câu sai/câu đánh dấu/đến hạn ôn, tùy chọn đảo thứ tự câu. Có kết quả đúng sai ngay sau mỗi câu và tổng kết. Nếu tập lọc có ít câu hơn yêu cầu thì báo rõ số có sẵn và cho dùng số đó, không lặp câu để bù.
+
+4. Thi thử
+Người dùng chọn số câu, thời gian và ngưỡng mục tiêu; mặc định có thể dùng 30 câu/45 phút/80%, gắn nhãn “Cấu hình luyện tập”, không mô tả là thể lệ thi chính thức. Ẩn đáp án và lời giải đến khi nộp bài. Có đánh dấu xem lại, điều hướng tự do, chỉ báo chưa trả lời và xác nhận nộp sớm. Hết giờ tự nộp đúng một lần. Dùng deadline tuyệt đối lưu trong phiên, tính lại remaining từ Date.now() khi tải lại hoặc quay lại tab; refresh không được reset thời gian. Cho khôi phục phiên, chấm cả câu bỏ trống là sai, hiển thị kết quả và xem lại từng câu.
+
+5. Ôn câu sai và nhắc ôn
+Lưu lịch sử từng lượt với questionId, selectedOptionIds, correctOptionIds tại thời điểm chấm, isCorrect, answeredAt, sessionId, mode và việc đã xem đáp án trước. Phân biệt câu từng sai với câu đang sai ở lượt gần nhất. Dùng lịch ôn đơn giản, công bố rõ quy tắc: sai thì đến hạn lại vào ngày hôm sau và reset chuỗi; đúng không trợ giúp thì tiến qua khoảng 1, 3, 7, 14, 30 ngày. Xem đáp án trước không tăng chuỗi. Tính ngày ôn theo Asia/Ho_Chi_Minh; kiểm tra biên chuyển ngày. Đây là lịch học, không phải dự đoán xác suất đỗ.
+
+6. Thư viện và sao lưu
+Thư viện tìm kiếm toàn văn, xem đủ 110 mã câu và nguồn. Xuất/nhập bản sao tiến độ, ghi chú, đánh dấu và lịch sử phiên bằng JSON có version, ngày xuất và định danh ngân hàng câu hỏi. Validate file trước khi nhập, xem trước số bản ghi và chọn gộp/thay thế. File lỗi không được làm mất tiến độ hiện tại. Nút xóa tiến độ cần xác nhận cụ thể. Có thông báo dễ hiểu khi localStorage không khả dụng hoặc hết dung lượng.
+
+CHẤM ĐIỂM VÀ TRẠNG THÁI
+- Với single_choice: selectedOptionIds có đúng một ID và bằng đáp án đúng.
+- Với multiple_choice: so sánh hai tập hợp ID, không phụ thuộc thứ tự. Chỉ đúng khi chọn đủ và không chọn thừa. Không chấm đúng nếu chỉ chọn một trong nhiều đáp án đúng. Không cộng điểm từng phần trong điểm chính.
+- Nếu đảo thứ tự lựa chọn, vẫn giữ option.id và toàn bộ ánh xạ đáp án/giải thích. Nhãn hiển thị không được làm hiểu sai chữ A/B/C trong lời giải nguồn; cách an toàn cho bản đầu là giữ thứ tự phương án nguồn và chỉ đảo câu.
+- Lưu questionOrder, selectedOptionIds, currentQuestionId, deadline, submittedAt và trạng thái phiên. Việc nộp/chấm phải idempotent, refresh không được thêm attempt trùng. Mọi sửa đổi ghi chú/toggle đánh dấu không tạo attempt.
+- Tỷ lệ tổng hợp phải nêu rõ mẫu số và loại phép tính; hiển thị 0 hoặc trạng thái chưa có dữ liệu khi chưa làm, không NaN/Infinity. Thống kê số câu là số ID duy nhất, không phải số lượt trả lời.
+
+THIẾT KẾ
+Giao diện gọn, dễ đọc, hỗ trợ điện thoại và desktop, sáng/tối, font hỗ trợ tiếng Việt. Desktop có thanh điều hướng và lưới số câu; mobile chuyển thành drawer. Nội dung câu hỏi dài phải xuống dòng, không tràn ngang. Dùng màu kèm chữ/biểu tượng cho đúng sai, không truyền đạt trạng thái chỉ bằng màu. Có focus rõ, thao tác bàn phím, label đầy đủ cho radio/checkbox và thông báo kết quả cho trình đọc màn hình. Tránh hiệu ứng gây xao nhãng.
+Footer hoặc trang Nguồn hiển thị T-Study, URL gốc, ngày thu thập và ghi chú tài liệu luyện tập tham khảo; không ngụ ý đây là sản phẩm chính thức của Anthropic hoặc ngân hàng đề thi thật. Chỉ sử dụng cho mục đích tự học cá nhân theo yêu cầu này.
+
+KIỂM TRA NGHIỆM THU
+- Import thực sự đủ 110 câu; báo 102 chọn một, 8 chọn nhiều. Các câu nhiều đáp án là q078 A,C; q081 A,B; q087 A,B,C; q092 A,B,D; q100 A,B,C; q103 A,B,E; q104 A,B,E; q106 A,B,C. Giữ đầy đủ prefix ccdv-f- trong dữ liệu.
+- Viết test có ý nghĩa cho bộ so sánh tập đáp án: đúng, sai, thiếu, thừa, đảo thứ tự; kiểm tra chấm q078 và q103 từ dữ liệu thật. Kiểm tra q001 đáp án C và q110 đáp án A.
+- Kiểm tra đủ các loại block paragraph/heading/list và các giải thích dài ở cuối ngân hàng. Không hiển thị [object Object] hoặc $13.
+- Kiểm tra reload khôi phục đúng câu, lựa chọn, đồng hồ; hết giờ tự nộp; nộp hai lần không nhân đôi lịch sử; đáp án bị ẩn đến khi nộp trong thi thử.
+- Kiểm tra xuất rồi nhập lại tiến độ, từ chối JSON lỗi mà dữ liệu cũ còn nguyên, thống kê không có dữ liệu và bộ lọc rỗng.
+- Chạy build và các test liên quan, thử màn hình mobile và desktop. Sửa lỗi phát hiện trước khi bàn giao.
+
+BÀN GIAO
+Hoàn thành source code và dữ liệu thật trong repo. README tiếng Việt nêu lệnh cài/chạy/build/test, cách thay ngân hàng câu hỏi, cấu trúc dữ liệu, cách sao lưu và giới hạn lưu cục bộ trên từng trình duyệt. Báo rõ đã nhập bao nhiêu câu và kiểm tra nào đã chạy. Nếu có rào cản môi trường, mô tả đúng phần chưa xác minh. Không tự tuyên bố test đã qua khi chưa chạy. Nếu có thể chạy preview, mở để tôi dùng thử; việc triển khai công khai chỉ làm khi tôi yêu cầu.
