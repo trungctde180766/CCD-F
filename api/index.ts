@@ -523,7 +523,11 @@ function appendIpHistory(
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   const urlObj = new URL(req.url || '/api', 'http://localhost');
-  const pathname = urlObj.pathname.replace(/\/+$/, '');
+  const routeParam = urlObj.searchParams.get('route');
+  const rawPathname = routeParam
+    ? `/api/${routeParam.replace(/^\/+/, '')}`
+    : urlObj.pathname;
+  const pathname = rawPathname.replace(/\/+$/, '');
   const method = (req.method || 'GET').toUpperCase();
 
   if (method === 'OPTIONS') {
@@ -534,6 +538,18 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   const { adminUsername, adminPassword, adminDisplayName, dbName } = getEnvConfig();
   const { db, dbConnected, dbError, dbCluster } = await getDatabase();
+
+  // 0. GET /api/health (Quick status check for Vercel & MongoDB env setup)
+  if (pathname === '/api/health' && method === 'GET') {
+    return sendJson(res, 200, {
+      ok: true,
+      dbConnected,
+      dbCluster,
+      dbName,
+      hasAdminPasswordConfigured: Boolean(adminPassword),
+      dbError,
+    });
+  }
 
   // 1. POST /api/auth/login
   if (pathname === '/api/auth/login' && method === 'POST') {
@@ -549,6 +565,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return sendJson(res, 400, {
         ok: false,
         error: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.',
+      });
+    }
+
+    if (rawUsername === adminUsername && !adminPassword && !db) {
+      return sendJson(res, 500, {
+        ok: false,
+        error:
+          'Chưa cấu hình biến môi trường ADMIN_PASSWORD và MONGODB_URI trên Vercel. Vui lòng thêm biến môi trường trong Vercel Project Settings -> Environment Variables rồi Redeploy.',
       });
     }
 

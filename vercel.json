@@ -6,8 +6,8 @@
   "installCommand": "npm ci",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.ts"
+      "source": "/api/:path*",
+      "destination": "/api/index?route=:path*"
     },
     {
       "source": "/((?!api/).*)",

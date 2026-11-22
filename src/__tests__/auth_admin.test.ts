@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import apiHandler, {
   hashPassword,
   parseUserAgentInfo,
   signToken,
@@ -148,5 +149,34 @@ describe('Authentication, Telemetry, Bilingual EN/VI & Complete Per-Option Ratio
       'ccdv-f-q001',
       'ccdv-f-q110',
     ]);
+  });
+
+  it('handles Vercel rewritten route query (/api/index?route=health) cleanly', async () => {
+    let status = 0;
+    let payload = '';
+    const fakeReq = {
+      url: '/api/index?route=health',
+      method: 'GET',
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as IncomingMessage;
+    const fakeRes = {
+      setHeader: () => {},
+      end: (chunk?: string) => {
+        payload = String(chunk || '');
+      },
+      set statusCode(code: number) {
+        status = code;
+      },
+      get statusCode() {
+        return status;
+      },
+    } as unknown as ServerResponse;
+
+    await apiHandler(fakeReq, fakeRes);
+    const parsed = JSON.parse(payload);
+    expect(status).toBe(200);
+    expect(parsed.ok).toBe(true);
+    expect(typeof parsed.dbConnected).toBe('boolean');
   });
 });
