@@ -38,6 +38,7 @@ interface ExamPageProps {
   onToggleExamFlag: (questionId: string) => void;
   onSetCurrentQuestion: (questionId: string) => void;
   onSubmitExam: (autoSubmittedByTimeout?: boolean) => void;
+  onRestartExamFromBeginning: () => void;
   onExitSession: () => void;
   onToggleBookmark: (questionId: string) => void;
   onSaveNote: (questionId: string, note: string) => void;
@@ -51,6 +52,7 @@ export const ExamPage: React.FC<ExamPageProps> = ({
   onToggleExamFlag,
   onSetCurrentQuestion,
   onSubmitExam,
+  onRestartExamFromBeginning,
   onExitSession,
   onToggleBookmark,
   onSaveNote,
@@ -250,23 +252,51 @@ export const ExamPage: React.FC<ExamPageProps> = ({
             </button>
 
             {!isCompleted ? (
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-colors"
-              >
-                <Send className="w-4 h-4" />
-                <span>Nộp bài</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Bạn có chắc muốn Reset thi lại đề này từ Câu 1? Toàn bộ đáp án đã chọn và đồng hồ sẽ đặt lại từ đầu.'
+                      )
+                    ) {
+                      onRestartExamFromBeginning();
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/60 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 transition-colors"
+                  title="Reset làm lại đề thi này từ Câu 1"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset thi lại</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Nộp bài</span>
+                </button>
+              </>
             ) : (
-              <button
-                type="button"
-                onClick={onExitSession}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Tạo đề thi thử mới</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onRestartExamFromBeginning}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Thi lại đề này từ Câu 1</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onExitSession}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 transition-colors"
+                >
+                  <span>Tạo đề thi mới</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

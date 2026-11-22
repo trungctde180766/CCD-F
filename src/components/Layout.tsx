@@ -91,11 +91,6 @@ export const Layout: React.FC<LayoutProps> = ({
           ? 'bg-brand-600 text-white'
           : 'bg-rose-100 text-rose-800 dark:bg-rose-900/70 dark:text-rose-200',
     },
-    {
-      id: 'library',
-      label: 'Thư viện & Sao lưu',
-      icon: <Database className="w-4 h-4" />,
-    },
   ];
 
   if (authUser?.role === 'admin') {

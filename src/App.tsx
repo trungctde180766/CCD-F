@@ -8,7 +8,6 @@ import {
   saveStoredAuthSession,
 } from './lib/auth';
 import {
-  applyBackupImport,
   createInitialProgressState,
   loadProgressState,
   markQuestionViewed,
@@ -25,19 +24,18 @@ import type {
   ActiveSession,
   AppProgressState,
   AuthUser,
-  BackupPayload,
   NavigationTab,
   QuestionFilterType,
+  StudySessionProgress,
 } from './types';
 import { AuthGatePage } from './components/AuthGatePage';
 import { AuthModal } from './components/AuthModal';
 import { Layout } from './components/Layout';
 import { OverviewPage } from './pages/OverviewPage';
-import { StudyPage } from './pages/StudyPage';
+import { getDefaultStudyProgress, StudyPage } from './pages/StudyPage';
 import { PracticePage } from './pages/PracticePage';
 import { ExamPage } from './pages/ExamPage';
 import { ReviewPage } from './pages/ReviewPage';
-import { LibraryBackupPage } from './pages/LibraryBackupPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 const THEME_STORAGE_KEY = 'ccdv_f_theme_dark';
@@ -65,14 +63,21 @@ export const App: React.FC = () => {
       if (loaded.activeSession.mode === 'exam') return 'exam';
       if (loaded.activeSession.mode === 'practice') return 'practice';
     }
+    if (loaded.lastActiveTab) {
+      if (loaded.lastActiveTab === 'admin' && storedAuth?.user?.role !== 'admin') {
+        return 'overview';
+      }
+      return loaded.lastActiveTab;
+    }
     return 'overview';
   });
 
-  const [studyFilterTarget, setStudyFilterTarget] = useState<{
+  const [externalStudyOverride, setExternalStudyOverride] = useState<{
     filter: QuestionFilterType;
     questionId?: string;
     tag?: string;
-  }>({ filter: 'all' });
+    nonce: number;
+  } | null>(null);
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
@@ -96,7 +101,7 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // On initial mount, if authSession exists, verify with /api/auth/me and reconcile server progress
+  // Verify auth session with server and reconcile cloud progress on mount
   useEffect(() => {
     if (!authSession?.token) return;
     let cancelled = false;
@@ -117,7 +122,7 @@ export const App: React.FC = () => {
         }
       })
       .catch(() => {
-        // Offline or dev environment without API: keep local user progress gracefully
+        // Keep local user progress gracefully if offline
       });
 
     return () => {
@@ -145,13 +150,19 @@ export const App: React.FC = () => {
       return `Đang Luyện tập: Câu ${idx}/${sess.questionOrder.length}`;
     }
     if (activeTab === 'study') {
-      return `Đang Học từng câu (${state.lastStudiedQuestionId || 'ccdv-f-q001'})`;
+      const curQ =
+        state.studyProgress?.currentQuestionId || state.lastStudiedQuestionId || 'ccdv-f-q001';
+      return `Đang Học từng câu (${curQ})`;
     }
     if (activeTab === 'review') return 'Đang xem Lịch ôn & Câu sai';
-    if (activeTab === 'library') return 'Đang tra cứu Thư viện 110 câu';
     if (activeTab === 'admin') return 'Đang mở Admin Dashboard';
     return 'Đang xem Tổng quan';
-  }, [activeTab, state.activeSession, state.lastStudiedQuestionId]);
+  }, [
+    activeTab,
+    state.activeSession,
+    state.studyProgress?.currentQuestionId,
+    state.lastStudiedQuestionId,
+  ]);
 
   // Periodic & reactive heartbeat for live online status, device, IP & exam tracking
   useEffect(() => {
@@ -161,7 +172,10 @@ export const App: React.FC = () => {
         currentTab: activeTab,
         activityStatus: currentActivityDescription,
         currentQuestionId:
-          state.activeSession?.currentQuestionId || state.lastStudiedQuestionId || null,
+          state.activeSession?.currentQuestionId ||
+          state.studyProgress?.currentQuestionId ||
+          state.lastStudiedQuestionId ||
+          null,
       }).catch(() => {});
     };
 
@@ -173,6 +187,7 @@ export const App: React.FC = () => {
     activeTab,
     currentActivityDescription,
     state.activeSession?.currentQuestionId,
+    state.studyProgress?.currentQuestionId,
     state.lastStudiedQuestionId,
   ]);
 
@@ -211,6 +226,17 @@ export const App: React.FC = () => {
     [currentUsername, authSession?.token, scheduleCloudSync]
   );
 
+  const handleSelectTab = useCallback(
+    (tab: NavigationTab) => {
+      setActiveTab(tab);
+      updateStateAndPersist((prev) => ({
+        ...prev,
+        lastActiveTab: tab,
+      }));
+    },
+    [updateStateAndPersist]
+  );
+
   const handleAuthSuccess = useCallback(
     (params: {
       token: string;
@@ -234,6 +260,12 @@ export const App: React.FC = () => {
 
       if (params.user.role === 'admin') {
         setActiveTab('admin');
+      } else if (merged.activeSession?.status === 'in_progress') {
+        setActiveTab(merged.activeSession.mode === 'exam' ? 'exam' : 'practice');
+      } else if (merged.lastActiveTab && merged.lastActiveTab !== 'admin') {
+        setActiveTab(merged.lastActiveTab);
+      } else {
+        setActiveTab('overview');
       }
     },
     []
@@ -243,13 +275,10 @@ export const App: React.FC = () => {
     saveStoredAuthSession(null);
     setAuthSession(null);
     setCloudSynced(false);
-    // Switch workspace to isolated guest progress
     const guestLoaded = loadProgressState(null);
     setAppStore(guestLoaded);
-    if (activeTab === 'admin') {
-      setActiveTab('overview');
-    }
-  }, [activeTab]);
+    setActiveTab('overview');
+  }, []);
 
   const stats = useMemo(() => computeAggregateStats(state), [state]);
 
@@ -274,6 +303,29 @@ export const App: React.FC = () => {
     [updateStateAndPersist]
   );
 
+  const handleUpdateStudyProgress = useCallback(
+    (updater: (prev: StudySessionProgress) => StudySessionProgress) => {
+      updateStateAndPersist((prev) => {
+        const base = prev.studyProgress || getDefaultStudyProgress(prev.lastStudiedQuestionId);
+        const nextStudy = updater(base);
+        return {
+          ...prev,
+          studyProgress: nextStudy,
+          lastStudiedQuestionId: nextStudy.currentQuestionId,
+        };
+      });
+    },
+    [updateStateAndPersist]
+  );
+
+  const handleResetStudyPassOnly = useCallback(() => {
+    updateStateAndPersist((prev) => ({
+      ...prev,
+      studyProgress: getDefaultStudyProgress('ccdv-f-q001'),
+      lastStudiedQuestionId: 'ccdv-f-q001',
+    }));
+  }, [updateStateAndPersist]);
+
   const handleRecordStudyAttempt = useCallback(
     (params: {
       questionId: string;
@@ -296,18 +348,44 @@ export const App: React.FC = () => {
 
   const handleStartSession = useCallback(
     (session: ActiveSession) => {
+      const targetTab: NavigationTab =
+        session.mode === 'exam' ? 'exam' : session.mode === 'practice' ? 'practice' : 'study';
       updateStateAndPersist((prev) => ({
         ...prev,
         activeSession: session,
+        lastActiveTab: targetTab,
       }));
-      if (session.mode === 'exam') {
-        setActiveTab('exam');
-      } else if (session.mode === 'practice') {
-        setActiveTab('practice');
-      }
+      setActiveTab(targetTab);
     },
     [updateStateAndPersist]
   );
+
+  const handleRestartExamFromBeginning = useCallback(() => {
+    updateStateAndPersist((prev) => {
+      if (!prev.activeSession || prev.activeSession.mode !== 'exam') return prev;
+      const old = prev.activeSession;
+      const now = new Date();
+      const durationMinutes = old.durationMinutes ?? 45;
+      const freshExam: ActiveSession = {
+        ...old,
+        id: `sess_exam_${now.getTime()}`,
+        currentQuestionId: old.questionOrder[0],
+        selections: {},
+        checkedQuestions: {},
+        revealedQuestions: {},
+        flaggedQuestions: {},
+        startedAt: now.toISOString(),
+        deadline: now.getTime() + durationMinutes * 60 * 1000,
+        submittedAt: null,
+        status: 'in_progress',
+        autoSubmittedByTimeout: false,
+      };
+      return {
+        ...prev,
+        activeSession: freshExam,
+      };
+    });
+  }, [updateStateAndPersist]);
 
   const handleUpdateSessionSelection = useCallback(
     (questionId: string, selectedOptionIds: string[]) => {
@@ -404,22 +482,22 @@ export const App: React.FC = () => {
 
   const handleOpenStudyWithFilter = useCallback(
     (filter: QuestionFilterType, questionId?: string, tag = 'all') => {
-      setStudyFilterTarget({ filter, questionId, tag });
-      setActiveTab('study');
+      setExternalStudyOverride({ filter, questionId, tag, nonce: Date.now() });
+      handleSelectTab('study');
     },
-    []
+    [handleSelectTab]
   );
 
   const handleResumeActiveSession = useCallback(() => {
     if (!state.activeSession) return;
     if (state.activeSession.mode === 'exam') {
-      setActiveTab('exam');
+      handleSelectTab('exam');
     } else if (state.activeSession.mode === 'practice') {
-      setActiveTab('practice');
+      handleSelectTab('practice');
     } else {
-      setActiveTab('study');
+      handleSelectTab('study');
     }
-  }, [state.activeSession]);
+  }, [state.activeSession, handleSelectTab]);
 
   const handleStartQuickPracticeFromReview = useCallback(
     (filter: QuestionFilterType) => {
@@ -436,16 +514,13 @@ export const App: React.FC = () => {
     [stats, handleStartSession]
   );
 
-  const handleImportBackup = useCallback(
-    (payload: BackupPayload, mode: 'replace' | 'merge') => {
-      updateStateAndPersist((prev) => applyBackupImport(prev, payload, mode));
-    },
-    [updateStateAndPersist]
-  );
-
   const handleResetAllProgress = useCallback(() => {
-    updateStateAndPersist(() => createInitialProgressState());
-  }, [updateStateAndPersist]);
+    updateStateAndPersist(() => ({
+      ...createInitialProgressState(),
+      studyProgress: getDefaultStudyProgress('ccdv-f-q001'),
+      lastActiveTab: activeTab,
+    }));
+  }, [updateStateAndPersist, activeTab]);
 
   // MANDATORY LOGIN GATE: Users must authenticate before accessing any study/exam content
   if (!authSession || !authSession.user) {
@@ -461,7 +536,7 @@ export const App: React.FC = () => {
   return (
     <Layout
       activeTab={activeTab}
-      onSelectTab={setActiveTab}
+      onSelectTab={handleSelectTab}
       darkMode={darkMode}
       onToggleDarkMode={() => setDarkMode((d) => !d)}
       dueCount={stats.dueForReviewCount}
@@ -469,7 +544,7 @@ export const App: React.FC = () => {
       activeSession={state.activeSession}
       onResumeActiveSession={handleResumeActiveSession}
       storageStatus={storageStatus}
-      authUser={authSession?.user || null}
+      authUser={authSession.user}
       cloudSynced={cloudSynced}
       onOpenAuthModal={() => setIsAuthModalOpen(true)}
       onLogout={handleLogout}
@@ -478,10 +553,11 @@ export const App: React.FC = () => {
         <OverviewPage
           state={state}
           stats={stats}
-          onNavigateTab={setActiveTab}
+          onNavigateTab={handleSelectTab}
           onOpenStudyWithFilter={handleOpenStudyWithFilter}
           onResumeActiveSession={handleResumeActiveSession}
           onDiscardActiveSession={handleExitSession}
+          onResetAllProgress={handleResetAllProgress}
         />
       )}
 
@@ -489,9 +565,10 @@ export const App: React.FC = () => {
         <StudyPage
           state={state}
           stats={stats}
-          initialFilter={studyFilterTarget.filter}
-          initialQuestionId={studyFilterTarget.questionId}
-          initialDerivedTag={studyFilterTarget.tag}
+          externalFilterOverride={externalStudyOverride}
+          onUpdateStudyProgress={handleUpdateStudyProgress}
+          onResetStudyPassOnly={handleResetStudyPassOnly}
+          onResetAllProgress={handleResetAllProgress}
           onMarkViewed={handleMarkViewed}
           onRecordAttempt={handleRecordStudyAttempt}
           onToggleBookmark={handleToggleBookmark}
@@ -523,6 +600,7 @@ export const App: React.FC = () => {
           onToggleExamFlag={handleToggleExamFlag}
           onSetCurrentQuestion={handleSetCurrentSessionQuestion}
           onSubmitExam={handleSubmitActiveSession}
+          onRestartExamFromBeginning={handleRestartExamFromBeginning}
           onExitSession={handleExitSession}
           onToggleBookmark={handleToggleBookmark}
           onSaveNote={handleSaveNote}
@@ -540,18 +618,7 @@ export const App: React.FC = () => {
         />
       )}
 
-      {activeTab === 'library' && (
-        <LibraryBackupPage
-          state={state}
-          stats={stats}
-          storageStatus={storageStatus}
-          onOpenQuestionInStudy={(qId) => handleOpenStudyWithFilter('all', qId)}
-          onImportBackup={handleImportBackup}
-          onResetAllProgress={handleResetAllProgress}
-        />
-      )}
-
-      {activeTab === 'admin' && authSession?.user?.role === 'admin' && (
+      {activeTab === 'admin' && authSession.user.role === 'admin' && (
         <AdminDashboardPage
           token={authSession.token}
           onOpenQuestionInStudy={(qId) => handleOpenStudyWithFilter('all', qId)}

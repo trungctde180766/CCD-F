@@ -32,6 +32,7 @@ interface OverviewPageProps {
   onOpenStudyWithFilter: (filter: QuestionFilterType, questionId?: string, tag?: string) => void;
   onResumeActiveSession: () => void;
   onDiscardActiveSession: () => void;
+  onResetAllProgress: () => void;
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
@@ -41,6 +42,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   onOpenStudyWithFilter,
   onResumeActiveSession,
   onDiscardActiveSession,
+  onResetAllProgress,
 }) => {
   const activeSession: ActiveSession | null =
     state.activeSession && state.activeSession.status === 'in_progress'
@@ -577,10 +579,18 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => onNavigateTab('library')}
-              className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Bạn có chắc muốn Reset toàn bộ tiến độ học tập về 0/110 câu để học & thi lại từ đầu không?'
+                  )
+                ) {
+                  onResetAllProgress();
+                }
+              }}
+              className="font-semibold text-rose-600 dark:text-rose-400 hover:underline"
             >
-              Sao lưu tiến độ (JSON) →
+              Reset làm lại từ đầu (0/110)
             </button>
           </div>
         </section>

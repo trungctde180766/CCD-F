@@ -36,6 +36,8 @@ export function createInitialProgressState(): AppProgressState {
     attempts: [],
     srs: {},
     activeSession: null,
+    studyProgress: null,
+    lastActiveTab: 'overview',
     sessionHistory: [],
     lastStudiedQuestionId: null,
     updatedAt: new Date().toISOString(),
@@ -79,6 +81,13 @@ export function sanitizeProgressState(raw: unknown): AppProgressState {
     attempts: Array.isArray(obj.attempts) ? obj.attempts : [],
     srs: obj.srs && typeof obj.srs === 'object' ? { ...obj.srs } : {},
     activeSession: obj.activeSession && typeof obj.activeSession === 'object' ? obj.activeSession : null,
+    studyProgress:
+      obj.studyProgress && typeof obj.studyProgress === 'object' ? obj.studyProgress : null,
+    lastActiveTab:
+      typeof obj.lastActiveTab === 'string' &&
+      ['overview', 'study', 'practice', 'exam', 'review', 'admin'].includes(obj.lastActiveTab)
+        ? obj.lastActiveTab
+        : 'overview',
     sessionHistory: Array.isArray(obj.sessionHistory) ? obj.sessionHistory : [],
     lastStudiedQuestionId:
       typeof obj.lastStudiedQuestionId === 'string' ? obj.lastStudiedQuestionId : null,
@@ -645,6 +654,13 @@ export function applyBackupImport(
     srs: mergedSrs,
     sessionHistory: mergedSessions,
     activeSession: currentState.activeSession ?? incoming.activeSession,
+    studyProgress:
+      currentState.studyProgress && incoming.studyProgress
+        ? currentState.studyProgress.updatedAt >= incoming.studyProgress.updatedAt
+          ? currentState.studyProgress
+          : incoming.studyProgress
+        : currentState.studyProgress ?? incoming.studyProgress,
+    lastActiveTab: currentState.lastActiveTab ?? incoming.lastActiveTab,
     lastStudiedQuestionId: currentState.lastStudiedQuestionId ?? incoming.lastStudiedQuestionId,
     updatedAt: new Date().toISOString(),
   };

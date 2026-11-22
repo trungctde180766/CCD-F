@@ -195,6 +195,16 @@ export interface SessionHistoryItem {
   flaggedQuestions?: Record<string, boolean>;
 }
 
+export interface StudySessionProgress {
+  currentQuestionId: string;
+  filterType: QuestionFilterType;
+  derivedTag: string;
+  searchQuery: string;
+  selectionsByQuestion: Record<string, string[]>;
+  checkedByQuestion: Record<string, { checked: boolean; revealedBeforeCheck: boolean }>;
+  updatedAt: string;
+}
+
 export interface AppProgressState {
   schemaVersion: number;
   courseId: string;
@@ -205,6 +215,8 @@ export interface AppProgressState {
   attempts: AttemptRecord[];
   srs: Record<string, SRSItemState>;
   activeSession: ActiveSession | null;
+  studyProgress: StudySessionProgress | null;
+  lastActiveTab?: NavigationTab;
   sessionHistory: SessionHistoryItem[];
   lastStudiedQuestionId: string | null;
   updatedAt: string;
@@ -243,7 +255,6 @@ export type NavigationTab =
   | 'practice'
   | 'exam'
   | 'review'
-  | 'library'
   | 'admin';
 
 export interface AuthUser {
