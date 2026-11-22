@@ -8,7 +8,7 @@ import {
   QUESTIONS_BY_ID,
 } from '../data/questionBank';
 
-describe('Dataset Validation — 110 Real Questions from T-Study (ccdv-f)', () => {
+describe('Dataset Validation — 110 Real Questions (ccdv-f)', () => {
   it('validates root structure and imports exactly 110 questions (102 single_choice, 8 multiple_choice)', () => {
     expect(DATASET_VALIDATION.isValid).toBe(true);
     expect(DATASET_VALIDATION.errors).toEqual([]);

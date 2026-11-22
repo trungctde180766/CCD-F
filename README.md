@@ -1,6 +1,6 @@
 # CCDV-F Study — Ứng dụng Tự học & Luyện thi Claude Certified Developer – Foundations
 
-Ứng dụng web tự học, luyện tập, thi thử và ôn tập ngắt quãng (Spaced Repetition) dành cho bộ **110 câu hỏi thực tế Claude Certified Developer – Foundations (CCDV-F)** trích xuất từ nguồn [T-Study (`ccdv-f`, revision 2)](https://tstudy.vercel.app/study/ccdv-f).
+Ứng dụng web tự học, luyện tập, thi thử và ôn tập ngắt quãng (Spaced Repetition) dành cho bộ **110 câu hỏi thực tế Claude Certified Developer – Foundations (CCDV-F)**.
 
 ---
 
@@ -159,7 +159,6 @@ Dự án đã được cấu hình sẵn:
 
 ---
 
-## 7. Lưu ý Nguồn & Miễn trừ Trách nhiệm
+## 8. Miễn trừ Trách nhiệm
 
-- Nguồn dữ liệu: **T-Study (`ThinhNH39`)** — `https://tstudy.vercel.app/study/ccdv-f` (Revision 2, thu thập ngày `21/11/2026`).
-- Đây là ứng dụng và tài liệu luyện tập tham khảo phục vụ mục đích tự học cá nhân. Các câu hỏi, đáp án và giải thích được giữ nguyên theo nguồn, chưa được thẩm định độc lập và **không phải** sản phẩm chính thức của Anthropic hay ngân hàng đề thi thật.
+- Đây là ứng dụng và tài liệu luyện tập tham khảo phục vụ mục đích tự học cá nhân và nhóm học tập, **không phải** sản phẩm chính thức của Anthropic hay ngân hàng đề thi thật.

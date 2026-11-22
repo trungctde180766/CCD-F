@@ -2,7 +2,7 @@
   "name": "ccdv-f-study-app",
   "private": true,
   "version": "1.0.0",
-  "description": "Ứng dụng tự học và luyện thi Claude Certified Developer – Foundations (110 câu hỏi thực tế từ T-Study)",
+  "description": "Ứng dụng tự học và luyện thi Claude Certified Developer – Foundations (110 câu hỏi thực tế)",
   "type": "module",
   "scripts": {
     "dev": "vite",

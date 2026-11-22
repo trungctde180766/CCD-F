@@ -264,28 +264,16 @@ export const Layout: React.FC<LayoutProps> = ({
         {children}
       </main>
 
-      {/* Footer with Required Attribution & Disclaimers */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+      {/* Footer */}
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-5 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
           <div className="space-y-1 max-w-3xl">
             <p className="font-semibold text-slate-700 dark:text-slate-300">
-              Nguồn dữ liệu: {QUESTION_BANK.extraction.sourceAuthor} (
-              <a
-                href={QUESTION_BANK.extraction.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-600 dark:text-brand-400 underline hover:text-brand-700"
-              >
-                {QUESTION_BANK.extraction.sourceUrl}
-              </a>
-              ) • Ngày thu thập: {QUESTION_BANK.extraction.retrievedDate} (Revision{' '}
-              {QUESTION_BANK.revision})
+              Claude Certified Developer – Foundations (CCDV-F • 110 câu hỏi luyện tập)
             </p>
             <p>
-              <strong>Lưu ý miễn trừ trách nhiệm:</strong> Đây là tài liệu luyện tập tham khảo phục vụ
-              mục đích tự học cá nhân và nhóm học tập. Các câu hỏi, đáp án và lời giải được giữ nguyên
-              theo nguồn T-Study, chưa được thẩm định độc lập và <strong>không phải</strong> sản phẩm
-              chính thức của Anthropic hay ngân hàng đề thi thật.
+              Tài liệu luyện tập tham khảo phục vụ mục đích tự học cá nhân và nhóm học tập, không
+              phải sản phẩm chính thức của Anthropic hay ngân hàng đề thi thật.
             </p>
           </div>
           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 shrink-0">

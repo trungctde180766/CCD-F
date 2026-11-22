@@ -813,7 +813,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <div className="p-3.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm text-blue-900 dark:text-blue-200 space-y-1">
                 <div className="font-semibold flex items-center gap-1.5">
                   <Info className="w-4 h-4 shrink-0" />
-                  <span>Ghi chú từ dữ liệu nguồn (T-Study):</span>
+                  <span>Ghi chú câu hỏi:</span>
                 </div>
                 {question.sourceNotes.map((note, idx) => (
                   <p key={idx}>{note}</p>
@@ -821,15 +821,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </div>
             )}
 
-            {/* Main Explanation from Source (English + Vietnamese Bilingual Summary) */}
+            {/* Main Explanation (English + Vietnamese Bilingual Summary) */}
             <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-brand-500" />
-                  <span>Giải thích chi tiết từ nguồn (Explanation)</span>
+                  <span>Giải thích chi tiết (Explanation)</span>
                 </h3>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Nguồn: {question.source?.name || 'T-Study'} • Chưa thẩm định độc lập
+                  Bộ câu hỏi luyện tập CCDV-F
                 </span>
               </div>
 

@@ -356,9 +356,8 @@ export const AuthGatePage: React.FC<AuthGatePageProps> = ({
 
       {/* Footer */}
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-4 px-4 sm:px-6 text-center text-xs text-slate-500 dark:text-slate-400">
-        Nguồn dữ liệu luyện tập: {QUESTION_BANK.extraction.sourceAuthor} (Revision{' '}
-        {QUESTION_BANK.revision} • {QUESTION_BANK.extraction.retrievedDate}) • Tài liệu tham khảo tự
-        học, không phải sản phẩm chính thức của Anthropic.
+        Claude Certified Developer – Foundations (110 câu hỏi luyện tập • Revision{' '}
+        {QUESTION_BANK.revision}) • Tài liệu tham khảo tự học.
       </footer>
     </div>
   );

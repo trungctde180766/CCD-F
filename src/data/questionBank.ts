@@ -116,7 +116,7 @@ export function deriveQuestionSourceNotes(q: Question): string[] {
   }
   if (q.id === 'ccdv-f-q004' || q.id === 'ccdv-f-q019') {
     notes.push(
-      'Ghi chú từ nguồn: Lời giải câu này có trích dẫn tài liệu OpenAI; nội dung và đáp án được giữ nguyên văn theo nguồn T-Study.'
+      'Ghi chú câu hỏi: Lời giải câu này có trích dẫn tài liệu kỹ thuật OpenAI; nội dung và đáp án được giữ nguyên văn.'
     );
   }
   if (q.id === 'ccdv-f-q054' || q.id === 'ccdv-f-q055' || q.id === 'ccdv-f-q056') {
