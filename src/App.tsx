@@ -29,6 +29,7 @@ import type {
   NavigationTab,
   QuestionFilterType,
 } from './types';
+import { AuthGatePage } from './components/AuthGatePage';
 import { AuthModal } from './components/AuthModal';
 import { Layout } from './components/Layout';
 import { OverviewPage } from './pages/OverviewPage';
@@ -445,6 +446,17 @@ export const App: React.FC = () => {
   const handleResetAllProgress = useCallback(() => {
     updateStateAndPersist(() => createInitialProgressState());
   }, [updateStateAndPersist]);
+
+  // MANDATORY LOGIN GATE: Users must authenticate before accessing any study/exam content
+  if (!authSession || !authSession.user) {
+    return (
+      <AuthGatePage
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode((d) => !d)}
+        onAuthSuccess={handleAuthSuccess}
+      />
+    );
+  }
 
   return (
     <Layout

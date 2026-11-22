@@ -2,13 +2,37 @@ import React from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import App from '../App';
+import { saveStoredAuthSession } from '../lib/auth';
 
-describe('Full Application UI End-to-End Flow (All 6 Screens + Mobile Drawer)', () => {
+describe('Full Application UI End-to-End Flow (Mandatory Auth Gate + All 6 Screens + Mobile Drawer)', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it('renders Overview screen with 110 questions, navigates to Study mode, checks q001 (single_choice) and q078 (multiple_choice)', () => {
+  it('enforces mandatory authentication gate when not logged in, blocking access to questions', () => {
+    render(<App />);
+
+    expect(
+      screen.getByText(/Bắt buộc đăng nhập để vào học và làm bài thi/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Đăng nhập để Bắt đầu Học/i)).toBeInTheDocument();
+    // Questions and overview dashboard must NOT be accessible before login
+    expect(screen.queryByText(/Bảng điều khiển tự học CCDV-F/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('ccdv-f-q001')).not.toBeInTheDocument();
+  });
+
+  it('renders Overview screen with 110 questions after login, navigates to Study mode, checks q001 and q078', () => {
+    saveStoredAuthSession({
+      token: 'test-token-hocvien01',
+      user: {
+        username: 'hocvien01',
+        displayName: 'Học Viên 01',
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      },
+    });
+
     render(<App />);
 
     // 1. Overview screen checks
@@ -28,11 +52,14 @@ describe('Full Application UI End-to-End Flow (All 6 Screens + Mobile Drawer)', 
     fireEvent.click(optionCRadio);
     fireEvent.click(screen.getByRole('button', { name: /Kiểm tra đáp án/i }));
 
-    // Verify correct feedback and source explanation appear
+    // Verify correct feedback, source explanation, and per-option rationales appear
     expect(
       screen.getByText(/Chính xác! Bạn đã chọn đúng toàn bộ đáp án/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/Correct answer from the source/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Giải thích chi tiết Vì sao Đúng \/ Vì sao Sai cho từng phương án/i)
+    ).toBeInTheDocument();
 
     // Filter to 8 multiple-choice questions and test q078 (A, C)
     const filterSelect = screen.getByLabelText(/Lọc theo trạng thái câu hỏi/i);
@@ -48,7 +75,18 @@ describe('Full Application UI End-to-End Flow (All 6 Screens + Mobile Drawer)', 
     fireEvent.click(screen.getByRole('button', { name: /Đóng bảng câu hỏi/i }));
   });
 
-  it('runs a Mock Exam session with hidden answers until submission and records results in Review & Library', () => {
+  it('runs a Mock Exam session for logged-in user with hidden answers until submission and records results in Review & Library', () => {
+    saveStoredAuthSession({
+      token: 'test-token-hocvien01',
+      user: {
+        username: 'hocvien01',
+        displayName: 'Học Viên 01',
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      },
+    });
+
     render(<App />);
 
     // Navigate to Mock Exam ("Thi thử")
