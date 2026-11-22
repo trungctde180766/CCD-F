@@ -125,7 +125,24 @@ npm run preview
 
 ---
 
-## 6. Triển khai CI/CD với GitHub Actions & Vercel
+## 6. Hệ thống Tài khoản Nhiều Người Học, MongoDB Atlas & Admin Dashboard
+
+- **Cơ sở dữ liệu Cloud:** Kết nối trực tiếp tới **MongoDB Atlas (`cluster0.9wawqci.mongodb.net` / database `ccdv_f_study`)** thông qua Serverless API tại [api/index.ts](file:///c:/Users/THANH%20TRUNG/Desktop/claude/api/index.ts).
+- **Không gian học tập riêng cho từng người:**
+  - Người học có thể bấm **Đăng nhập / Đăng ký** ở góc trên bên phải để tạo tài khoản riêng.
+  - Mỗi tài khoản có bộ tiến độ, lịch sử trả lời, lịch ôn SRS, câu đánh dấu, ghi chú cá nhân và lịch sử đề thi thử tách biệt hoàn toàn (lưu đồng thời theo khóa riêng `ccdv_f_study_progress_v1_user_<username>` dưới trình duyệt và đồng bộ tự động lên MongoDB Cloud).
+- **Tài khoản Quản trị viên (Admin Dashboard):**
+  - **Username:** `trung`
+  - **Password:** `concatre`
+  - Khi đăng nhập bằng tài khoản `trung`, thanh điều hướng sẽ xuất hiện tab riêng **Admin Dashboard** ([AdminDashboardPage.tsx](file:///c:/Users/THANH%20TRUNG/Desktop/claude/src/pages/AdminDashboardPage.tsx)) cho phép:
+    1. Xem danh sách toàn bộ học viên, độ phủ 110 câu, tỷ lệ đúng lần đầu/gần nhất, điểm thi thử cao nhất và trạng thái phiên đang làm dở.
+    2. Xem nhật ký **"Ai Thi Cái Gì"** toàn hệ thống và bấm vào từng bài thi để soi chi tiết từng câu học viên đã chọn phương án nào.
+    3. Xem thống kê các câu hỏi khó / tỷ lệ sai cao nhất trên toàn hệ thống.
+    4. Tạo thêm tài khoản học viên mới, đặt lại mật khẩu hoặc xóa tài khoản.
+
+---
+
+## 7. Triển khai CI/CD với GitHub Actions & Vercel
 
 Dự án đã được cấu hình sẵn:
 - `vercel.json`: cấu hình build chuẩn cho Vite SPA.

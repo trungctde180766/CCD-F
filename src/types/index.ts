@@ -243,7 +243,31 @@ export type NavigationTab =
   | 'practice'
   | 'exam'
   | 'review'
-  | 'library';
+  | 'library'
+  | 'admin';
+
+export interface AuthUser {
+  username: string;
+  displayName: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+  lastLoginAt: string;
+}
+
+export interface AdminLearnerReport {
+  username: string;
+  displayName: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+  lastLoginAt: string;
+  updatedAt: string;
+  viewedCount: number;
+  bookmarksCount: number;
+  notesCount: number;
+  attempts: AttemptRecord[];
+  sessionHistory: SessionHistoryItem[];
+  activeSession: ActiveSession | null;
+}
 
 export type QuestionFilterType =
   | 'all'

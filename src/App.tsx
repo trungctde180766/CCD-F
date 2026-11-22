@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  apiFetchMe,
+  apiSyncProgress,
+  loadStoredAuthSession,
+  reconcileUserProgress,
+  saveStoredAuthSession,
+} from './lib/auth';
 import {
   applyBackupImport,
   createInitialProgressState,
@@ -16,10 +23,12 @@ import { createSessionFromPool } from './lib/session';
 import type {
   ActiveSession,
   AppProgressState,
+  AuthUser,
   BackupPayload,
   NavigationTab,
   QuestionFilterType,
 } from './types';
+import { AuthModal } from './components/AuthModal';
 import { Layout } from './components/Layout';
 import { OverviewPage } from './pages/OverviewPage';
 import { StudyPage } from './pages/StudyPage';
@@ -27,18 +36,29 @@ import { PracticePage } from './pages/PracticePage';
 import { ExamPage } from './pages/ExamPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { LibraryBackupPage } from './pages/LibraryBackupPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 const THEME_STORAGE_KEY = 'ccdv_f_theme_dark';
 
 export const App: React.FC = () => {
+  const [authSession, setAuthSession] = useState<{
+    token: string;
+    user: AuthUser;
+  } | null>(() => loadStoredAuthSession());
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [cloudSynced, setCloudSynced] = useState<boolean>(false);
+
+  const currentUsername = authSession?.user?.username || null;
+
   const [{ state, storageStatus }, setAppStore] = useState<{
     state: AppProgressState;
     storageStatus: StorageStatus;
-  }>(() => loadProgressState());
+  }>(() => loadProgressState(loadStoredAuthSession()?.user?.username));
 
   const [activeTab, setActiveTab] = useState<NavigationTab>(() => {
-    // If there is an active in-progress exam or practice session on page reload, restore its tab!
-    const loaded = loadProgressState().state;
+    const storedAuth = loadStoredAuthSession();
+    const loaded = loadProgressState(storedAuth?.user?.username).state;
     if (loaded.activeSession && loaded.activeSession.status === 'in_progress') {
       if (loaded.activeSession.mode === 'exam') return 'exam';
       if (loaded.activeSession.mode === 'practice') return 'practice';
@@ -74,20 +94,111 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
+  // On initial mount, if authSession exists, verify with /api/auth/me and reconcile server progress
+  useEffect(() => {
+    if (!authSession?.token) return;
+    let cancelled = false;
+
+    apiFetchMe(authSession.token)
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok || !res.user) {
+          return;
+        }
+        setCloudSynced(Boolean(res.dbConnected));
+        if (res.progress) {
+          setAppStore((current) => {
+            const merged = reconcileUserProgress(current.state, res.progress);
+            const saveRes = saveProgressState(merged, res.user!.username);
+            return { state: merged, storageStatus: saveRes };
+          });
+        }
+      })
+      .catch(() => {
+        // Offline or dev environment without API: keep local user progress gracefully
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authSession?.token]);
+
+  const syncTimeoutRef = useRef<number | null>(null);
+
+  const scheduleCloudSync = useCallback(
+    (nextState: AppProgressState, token: string | null) => {
+      if (!token) return;
+      if (syncTimeoutRef.current !== null) {
+        window.clearTimeout(syncTimeoutRef.current);
+      }
+      syncTimeoutRef.current = window.setTimeout(() => {
+        apiSyncProgress(token, nextState)
+          .then((res) => {
+            if (res.ok) setCloudSynced(true);
+          })
+          .catch(() => {
+            setCloudSynced(false);
+          });
+      }, 300);
+    },
+    []
+  );
+
   const updateStateAndPersist = useCallback(
     (updater: (prev: AppProgressState) => AppProgressState) => {
       setAppStore((current) => {
         const nextState = updater(current.state);
         if (nextState === current.state) return current;
-        const saveRes = saveProgressState(nextState);
+        const saveRes = saveProgressState(nextState, currentUsername);
+        scheduleCloudSync(nextState, authSession?.token || null);
         return {
           state: nextState,
           storageStatus: saveRes,
         };
       });
     },
+    [currentUsername, authSession?.token, scheduleCloudSync]
+  );
+
+  const handleAuthSuccess = useCallback(
+    (params: {
+      token: string;
+      user: AuthUser;
+      serverProgress: unknown;
+      dbConnected: boolean;
+    }) => {
+      const nextAuth = { token: params.token, user: params.user };
+      saveStoredAuthSession(nextAuth);
+      setAuthSession(nextAuth);
+      setCloudSynced(params.dbConnected);
+
+      // Load this user's isolated local state and reconcile with their MongoDB server progress
+      const userLocal = loadProgressState(params.user.username).state;
+      const merged = reconcileUserProgress(userLocal, params.serverProgress);
+      const saveRes = saveProgressState(merged, params.user.username);
+      setAppStore({ state: merged, storageStatus: saveRes });
+
+      // Sync merged progress back to server so MongoDB always has the latest snapshot
+      apiSyncProgress(params.token, merged).catch(() => {});
+
+      if (params.user.role === 'admin') {
+        setActiveTab('admin');
+      }
+    },
     []
   );
+
+  const handleLogout = useCallback(() => {
+    saveStoredAuthSession(null);
+    setAuthSession(null);
+    setCloudSynced(false);
+    // Switch workspace to isolated guest progress
+    const guestLoaded = loadProgressState(null);
+    setAppStore(guestLoaded);
+    if (activeTab === 'admin') {
+      setActiveTab('overview');
+    }
+  }, [activeTab]);
 
   const stats = useMemo(() => computeAggregateStats(state), [state]);
 
@@ -296,6 +407,10 @@ export const App: React.FC = () => {
       activeSession={state.activeSession}
       onResumeActiveSession={handleResumeActiveSession}
       storageStatus={storageStatus}
+      authUser={authSession?.user || null}
+      cloudSynced={cloudSynced}
+      onOpenAuthModal={() => setIsAuthModalOpen(true)}
+      onLogout={handleLogout}
     >
       {activeTab === 'overview' && (
         <OverviewPage
@@ -373,6 +488,20 @@ export const App: React.FC = () => {
           onResetAllProgress={handleResetAllProgress}
         />
       )}
+
+      {activeTab === 'admin' && authSession?.user?.role === 'admin' && (
+        <AdminDashboardPage
+          token={authSession.token}
+          onOpenQuestionInStudy={(qId) => handleOpenStudyWithFilter('all', qId)}
+        />
+      )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        currentGuestProgress={state}
+      />
     </Layout>
   );
 };

@@ -15,6 +15,11 @@ export const STORAGE_KEY = 'ccdv_f_study_progress_v1';
 export const CURRENT_SCHEMA_VERSION = 1;
 export const BACKUP_FORMAT_VERSION = 1;
 
+export function getStorageKeyForUser(username?: string | null): string {
+  const clean = (username || '').trim().toLowerCase();
+  return clean ? `${STORAGE_KEY}_user_${clean}` : STORAGE_KEY;
+}
+
 export interface StorageStatus {
   available: boolean;
   error: string | null;
@@ -81,13 +86,17 @@ export function sanitizeProgressState(raw: unknown): AppProgressState {
   };
 }
 
-export function loadProgressState(): { state: AppProgressState; storageStatus: StorageStatus } {
+export function loadProgressState(username?: string | null): {
+  state: AppProgressState;
+  storageStatus: StorageStatus;
+} {
   const health = checkLocalStorageHealth();
   if (!health.available) {
     return { state: createInitialProgressState(), storageStatus: health };
   }
+  const key = getStorageKeyForUser(username);
   try {
-    const serialized = window.localStorage.getItem(STORAGE_KEY);
+    const serialized = window.localStorage.getItem(key);
     if (!serialized) {
       return { state: createInitialProgressState(), storageStatus: health };
     }
@@ -104,7 +113,10 @@ export function loadProgressState(): { state: AppProgressState; storageStatus: S
   }
 }
 
-export function saveProgressState(state: AppProgressState): StorageStatus {
+export function saveProgressState(
+  state: AppProgressState,
+  username?: string | null
+): StorageStatus {
   try {
     if (typeof window === 'undefined' || !window.localStorage) {
       return {
@@ -112,11 +124,12 @@ export function saveProgressState(state: AppProgressState): StorageStatus {
         error: 'Không có localStorage để lưu tiến độ.',
       };
     }
+    const key = getStorageKeyForUser(username);
     const nextState: AppProgressState = {
       ...state,
       updatedAt: new Date().toISOString(),
     };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+    window.localStorage.setItem(key, JSON.stringify(nextState));
     return { available: true, error: null };
   } catch (err) {
     const isQuota =
