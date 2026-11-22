@@ -254,6 +254,34 @@ export interface AuthUser {
   lastLoginAt: string;
 }
 
+export interface UserTelemetrySummary {
+  ipAddress: string;
+  location: string;
+  userAgent: string;
+  os: string;
+  browser: string;
+  deviceType: 'Desktop' | 'Mobile' | 'Tablet';
+  screenResolution?: string;
+  viewport?: string;
+  language?: string;
+  timezone?: string;
+  cpuCores?: number | null;
+  deviceMemoryGb?: number | null;
+  currentTab?: string;
+  activityStatus?: string;
+  currentQuestionId?: string | null;
+  liveExamState?: {
+    mode: string;
+    title: string;
+    currentQuestionIndex: number;
+    totalQuestions: number;
+    answeredCount: number;
+    remainingSeconds: number | null;
+    startedAt: string;
+  } | null;
+  lastSeenAt: string;
+}
+
 export interface AdminLearnerReport {
   username: string;
   displayName: string;
@@ -261,6 +289,11 @@ export interface AdminLearnerReport {
   createdAt: string;
   lastLoginAt: string;
   updatedAt: string;
+  isOnline?: boolean;
+  isRecentlyActive?: boolean;
+  secondsSinceLastSeen?: number;
+  telemetry?: UserTelemetrySummary | null;
+  ipHistory?: Array<{ ip: string; device: string; seenAt: string }>;
   viewedCount: number;
   bookmarksCount: number;
   notesCount: number;

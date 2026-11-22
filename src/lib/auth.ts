@@ -72,11 +72,34 @@ export interface AuthApiResponse {
   dbError?: string | null;
 }
 
+export function collectClientDeviceTelemetry(extra?: {
+  currentTab?: string;
+  activityStatus?: string;
+  currentQuestionId?: string | null;
+  liveExamState?: Record<string, unknown> | null;
+}): Record<string, unknown> {
+  if (typeof window === 'undefined') return { ...extra };
+  const nav = window.navigator as Navigator & { deviceMemory?: number };
+  return {
+    screenResolution: window.screen ? `${window.screen.width}x${window.screen.height}` : undefined,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    language: nav?.language || 'vi-VN',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
+    cpuCores: nav?.hardwareConcurrency || null,
+    deviceMemoryGb: nav?.deviceMemory || null,
+    ...extra,
+  };
+}
+
 export async function apiLogin(username: string, password: string): Promise<AuthApiResponse> {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({
+      username,
+      password,
+      telemetry: collectClientDeviceTelemetry({ activityStatus: 'Vừa đăng nhập hệ thống' }),
+    }),
   });
   return (await res.json()) as AuthApiResponse;
 }
@@ -90,9 +113,32 @@ export async function apiRegister(params: {
   const res = await fetch('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      ...params,
+      telemetry: collectClientDeviceTelemetry({ activityStatus: 'Vừa đăng ký tài khoản mới' }),
+    }),
   });
   return (await res.json()) as AuthApiResponse;
+}
+
+export async function apiSendHeartbeat(
+  token: string,
+  extra?: {
+    currentTab?: string;
+    activityStatus?: string;
+    currentQuestionId?: string | null;
+    liveExamState?: Record<string, unknown> | null;
+  }
+): Promise<{ ok: boolean; lastSeenAt?: string; ipAddress?: string }> {
+  const res = await fetch('/api/telemetry/heartbeat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(collectClientDeviceTelemetry(extra)),
+  });
+  return await res.json();
 }
 
 export async function apiFetchMe(token: string): Promise<AuthApiResponse> {

@@ -7,14 +7,20 @@ import {
   Clock,
   Database,
   Eye,
+  Globe,
   KeyRound,
+  Laptop,
   Loader2,
+  Monitor,
   Plus,
+  Radio,
   RefreshCw,
   Search,
   Shield,
+  Smartphone,
   Trash2,
   Users,
+  Wifi,
   X,
   XCircle,
 } from 'lucide-react';
@@ -54,6 +60,8 @@ interface GlobalSessionEntry {
   username: string;
   displayName: string;
   role: 'admin' | 'user';
+  ipAddress?: string;
+  deviceSummary?: string;
   session: SessionHistoryItem;
 }
 
@@ -112,12 +120,25 @@ function computeLearnerMetrics(user: AdminLearnerReport): ComputedLearnerMetrics
   };
 }
 
+function formatLastSeenAgo(seconds?: number): string {
+  if (seconds === undefined || seconds === null) return 'Chưa rõ';
+  if (seconds < 15) return 'Vừa tức thì';
+  if (seconds < 60) return `${seconds} giây trước`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  return `${days} ngày trước`;
+}
+
 export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   token,
   onOpenQuestionInStudy,
 }) => {
   const [data, setData] = useState<AdminOverviewResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'learners' | 'sessions' | 'questions'>('learners');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -138,32 +159,49 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [resetPwdTarget, setResetPwdTarget] = useState<string | null>(null);
   const [resetPwdValue, setResetPwdValue] = useState<string>('');
 
-  const fetchOverview = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const res = await apiFetchAdminOverview(token);
-      if (!res.ok) {
-        setErrorMsg(res.error || 'Không thể tải dữ liệu quản trị.');
-      } else {
-        setData(res);
+  const fetchOverview = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      setErrorMsg(null);
+      try {
+        const res = await apiFetchAdminOverview(token);
+        if (!res.ok) {
+          if (!silent) setErrorMsg(res.error || 'Không thể tải dữ liệu quản trị.');
+        } else {
+          setData(res);
+        }
+      } catch {
+        if (!silent) setErrorMsg('Lỗi kết nối tới API quản trị.');
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch {
-      setErrorMsg('Lỗi kết nối tới API quản trị.');
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+    },
+    [token]
+  );
 
   useEffect(() => {
-    fetchOverview();
+    fetchOverview(false);
   }, [fetchOverview]);
+
+  // Live 10-second polling when autoRefresh is enabled
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = window.setInterval(() => {
+      fetchOverview(true);
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [autoRefresh, fetchOverview]);
 
   const learnerMetrics = useMemo(() => {
     if (!data?.users) return [];
     return data.users
       .map(computeLearnerMetrics)
-      .sort((a, b) => b.answeredUniqueCount - a.answeredUniqueCount);
+      .sort((a, b) => {
+        const aOnline = a.user.isOnline ? 1 : 0;
+        const bOnline = b.user.isOnline ? 1 : 0;
+        if (aOnline !== bOnline) return bOnline - aOnline;
+        return b.answeredUniqueCount - a.answeredUniqueCount;
+      });
   }, [data]);
 
   const filteredLearners = useMemo(() => {
@@ -172,18 +210,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     return learnerMetrics.filter(
       (m) =>
         m.user.username.toLowerCase().includes(q) ||
-        m.user.displayName.toLowerCase().includes(q)
+        m.user.displayName.toLowerCase().includes(q) ||
+        (m.user.telemetry?.ipAddress || '').toLowerCase().includes(q) ||
+        (m.user.telemetry?.os || '').toLowerCase().includes(q)
     );
   }, [learnerMetrics, searchQuery]);
 
   const globalSessions = useMemo<GlobalSessionEntry[]>(() => {
     const list: GlobalSessionEntry[] = [];
     for (const m of learnerMetrics) {
+      const t = m.user.telemetry;
+      const devSummary = t ? `${t.deviceType} • ${t.os} • ${t.browser}` : undefined;
       for (const sess of m.user.sessionHistory || []) {
         list.push({
           username: m.user.username,
           displayName: m.user.displayName,
           role: m.user.role,
+          ipAddress: t?.ipAddress,
+          deviceSummary: devSummary,
           session: sess,
         });
       }
@@ -200,7 +244,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       (g) =>
         g.username.toLowerCase().includes(q) ||
         g.displayName.toLowerCase().includes(q) ||
-        g.session.title.toLowerCase().includes(q)
+        g.session.title.toLowerCase().includes(q) ||
+        (g.ipAddress || '').toLowerCase().includes(q)
     );
   }, [globalSessions, searchQuery]);
 
@@ -240,8 +285,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   }, [learnerMetrics]);
 
   const totalLearners = learnerMetrics.length;
-  const activeLearnersCount = learnerMetrics.filter(
-    (m) => m.answeredUniqueCount > 0 || m.user.sessionHistory.length > 0
+  const onlineNowCount = learnerMetrics.filter((m) => m.user.isOnline).length;
+  const takingExamRightNowCount = learnerMetrics.filter(
+    (m) => m.user.activeSession && m.user.activeSession.status === 'in_progress'
   ).length;
   const totalExamsCount = globalSessions.filter((s) => s.session.mode === 'exam').length;
   const totalPracticesCount = globalSessions.filter((s) => s.session.mode === 'practice').length;
@@ -275,7 +321,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setNewUsername('');
     setNewDisplayName('');
     setNewPassword('');
-    fetchOverview();
+    fetchOverview(false);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -309,7 +355,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
     setActionToast(res.message || 'Đã xóa tài khoản.');
     setSelectedLearner(null);
-    fetchOverview();
+    fetchOverview(false);
   };
 
   return (
@@ -321,7 +367,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 border border-indigo-400/30 text-indigo-200">
                 <Shield className="w-3.5 h-3.5" />
-                <span>Admin Dashboard • Tài khoản quản trị: trung</span>
+                <span>Admin Control Center • Giám sát Thời gian thực</span>
               </span>
 
               {data && (
@@ -336,39 +382,52 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <span>
                     {data.dbConnected
                       ? `MongoDB Atlas Connected (${data.dbCluster})`
-                      : 'Chế độ Fallback (Kiểm tra Network Access 0.0.0.0/0 trên Atlas)'}
+                      : 'Chế độ Fallback (Kiểm tra MONGODB_URI / Network Access 0.0.0.0/0)'}
                   </span>
                 </span>
               )}
             </div>
 
             <h2 className="text-2xl font-bold">
-              Quản lý Học viên & Giám sát Kết quả Thi CCDV-F
+              Giám sát Người dùng, Địa chỉ IP, Thiết bị & Phòng thi Trực tuyến
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-3xl">
-              Theo dõi chính xác từng tài khoản đã học bao nhiêu câu, làm đề thi thử/luyện tập nào,
-              đạt bao nhiêu điểm và câu nào toàn hệ thống đang trả lời sai nhiều nhất.
+              Theo dõi trực tiếp ai đang Online, đăng nhập từ máy nào, địa chỉ IP nào, đang làm câu
+              hỏi hay đề thi thử nào và xem toàn bộ bài làm chi tiết của từng người.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => setShowCreateUserModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-xs transition-colors"
+              onClick={() => setAutoRefresh((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
+                autoRefresh
+                  ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200'
+                  : 'bg-white/10 border-white/15 text-slate-300'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>Tạo tài khoản học viên</span>
+              <Radio className={`w-3.5 h-3.5 ${autoRefresh ? 'animate-ping text-emerald-400' : ''}`} />
+              <span>{autoRefresh ? 'Live Auto-Refresh (10s)' : 'Tự động cập nhật: Tắt'}</span>
             </button>
 
             <button
               type="button"
-              onClick={fetchOverview}
+              onClick={() => setShowCreateUserModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-xs transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tạo tài khoản</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fetchOverview(false)}
               disabled={loading}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Làm mới dữ liệu</span>
+              <span>Làm mới</span>
             </button>
           </div>
         </div>
@@ -377,10 +436,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           <div className="mt-4 p-3 rounded-xl bg-amber-500/20 border border-amber-400/40 text-xs text-amber-100 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-300" />
             <div>
-              <strong>Lưu ý kết nối MongoDB Atlas trên Cloud:</strong> {data.dbError}. Hãy vào mục{' '}
-              <strong>Network Access</strong> trên MongoDB Atlas và thêm IP{' '}
-              <code className="font-mono font-bold">0.0.0.0/0</code> (Allow Access from Anywhere) để
-              Vercel Serverless có thể kết nối trực tiếp vào Cluster0.
+              <strong>Lưu ý kết nối MongoDB Atlas:</strong> {data.dbError}. Hãy đảm bảo đã cấu hình{' '}
+              <code className="font-mono font-bold">MONGODB_URI</code> trong Environment Variables
+              của Vercel và mở IP <code className="font-mono font-bold">0.0.0.0/0</code> trong
+              Network Access của Atlas.
             </div>
           </div>
         )}
@@ -406,14 +465,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
-            <span>Tổng số tài khoản</span>
+            <span>Người dùng & Trực tuyến</span>
             <Users className="w-4 h-4 text-brand-500" />
           </div>
-          <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
-            {totalLearners}
+          <div className="mt-2 flex items-baseline gap-2.5">
+            <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+              {totalLearners}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              {onlineNowCount} đang Online
+            </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Đang hoạt động làm bài: <strong>{activeLearnersCount}</strong> người
+            Đang trong phiên thi/luyện dở: <strong>{takingExamRightNowCount}</strong> người
           </p>
         </div>
 
@@ -472,7 +537,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
             }`}
           >
-            1. Tiến độ từng Học viên ({learnerMetrics.length})
+            1. Người dùng, Máy, IP & Trạng thái Thi ({learnerMetrics.length})
           </button>
 
           <button
@@ -500,13 +565,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </button>
         </div>
 
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo tên học viên, username..."
+            placeholder="Tìm theo tên, username, địa chỉ IP, hệ điều hành..."
             className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm"
           />
           {searchQuery && (
@@ -525,40 +590,39 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       {loading && !data ? (
         <div className="p-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-2">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-brand-500" />
-          <p className="text-sm text-slate-500">Đang tải dữ liệu quản trị từ MongoDB Atlas...</p>
+          <p className="text-sm text-slate-500">Đang tải dữ liệu giám sát từ MongoDB Atlas...</p>
         </div>
       ) : errorMsg ? (
         <div className="p-8 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-center text-rose-800 dark:text-rose-200 space-y-3">
           <p className="font-bold">{errorMsg}</p>
           <button
             type="button"
-            onClick={fetchOverview}
+            onClick={() => fetchOverview(false)}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white"
           >
             Thử lại
           </button>
         </div>
       ) : activeTab === 'learners' ? (
-        /* TAB 1: LEARNERS PROGRESS TABLE */
+        /* TAB 1: LEARNERS, DEVICE, IP, ONLINE PRESENCE & EXAM STATUS */
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
-                  <th className="py-3.5 px-4">Học viên</th>
-                  <th className="py-3.5 px-4">Tiến độ (110 câu)</th>
-                  <th className="py-3.5 px-4">Đúng gần nhất</th>
-                  <th className="py-3.5 px-4">Đúng lần đầu</th>
-                  <th className="py-3.5 px-4">Số bài Thi thử</th>
-                  <th className="py-3.5 px-4">Điểm thi cao nhất</th>
-                  <th className="py-3.5 px-4">Đang làm dở</th>
-                  <th className="py-3.5 px-4">Hoạt động cuối</th>
+                  <th className="py-3.5 px-4">Người dùng & Trạng thái</th>
+                  <th className="py-3.5 px-4">Địa chỉ IP & Vị trí</th>
+                  <th className="py-3.5 px-4">Thông tin Máy & Trình duyệt</th>
+                  <th className="py-3.5 px-4">Hoạt động / Thi cử hiện tại</th>
+                  <th className="py-3.5 px-4">Tiến độ học (110 câu)</th>
+                  <th className="py-3.5 px-4">Kết quả Thi thử</th>
                   <th className="py-3.5 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredLearners.map((m) => {
                   const pctCovered = Math.round((m.answeredUniqueCount / 110) * 100);
+                  const t = m.user.telemetry;
                   const inProgress =
                     m.user.activeSession && m.user.activeSession.status === 'in_progress'
                       ? m.user.activeSession
@@ -569,7 +633,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       key={m.user.username}
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
                     >
-                      <td className="py-3 px-4">
+                      {/* User & Online Status */}
+                      <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                           <span>{m.user.displayName}</span>
                           {m.user.role === 'admin' && (
@@ -579,9 +644,107 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           )}
                         </div>
                         <div className="text-xs font-mono text-slate-500">@{m.user.username}</div>
+                        <div className="mt-1">
+                          {m.user.isOnline ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                              <span>Đang Online</span>
+                            </span>
+                          ) : m.user.isRecentlyActive ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              <span>Vừa hoạt động ({formatLastSeenAgo(m.user.secondsSinceLastSeen)})</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                              <span className="w-2 h-2 rounded-full bg-slate-400" />
+                              <span>Offline ({formatLastSeenAgo(m.user.secondsSinceLastSeen)})</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
-                      <td className="py-3 px-4">
+                      {/* IP Address & Location */}
+                      <td className="py-3.5 px-4">
+                        {t?.ipAddress ? (
+                          <div className="space-y-0.5">
+                            <div className="inline-flex items-center gap-1.5 font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                              <Wifi className="w-3 h-3 text-brand-500" />
+                              <span>{t.ipAddress}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              <span>{t.location || 'Trực tuyến'}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Chưa ghi nhận IP</span>
+                        )}
+                      </td>
+
+                      {/* Device, OS, Browser & Hardware */}
+                      <td className="py-3.5 px-4">
+                        {t ? (
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              {t.deviceType === 'Mobile' ? (
+                                <Smartphone className="w-3.5 h-3.5 text-brand-500" />
+                              ) : (
+                                <Laptop className="w-3.5 h-3.5 text-brand-500" />
+                              )}
+                              <span>
+                                {t.os} • {t.browser}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {t.deviceType}
+                              {t.screenResolution ? ` • Màn hình ${t.screenResolution}` : ''}
+                              {t.cpuCores ? ` • ${t.cpuCores} nhân CPU` : ''}
+                            </div>
+                            {t.timezone && (
+                              <div className="text-[10px] text-slate-400">
+                                Múi giờ máy: {t.timezone} ({t.language || 'vi'})
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Chưa có thông tin máy</span>
+                        )}
+                      </td>
+
+                      {/* Current Activity / Live Exam Status */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1 max-w-[230px]">
+                          {t?.activityStatus && (
+                            <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {t.activityStatus}
+                            </div>
+                          )}
+                          {inProgress ? (
+                            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200">
+                              <div className="font-bold flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>Đang làm: {inProgress.title}</span>
+                              </div>
+                              <div>
+                                Đang ở câu:{' '}
+                                <code className="font-mono font-bold">
+                                  {inProgress.currentQuestionId}
+                                </code>{' '}
+                                • Đã chọn {Object.keys(inProgress.selections || {}).length}/
+                                {inProgress.questionOrder.length} câu
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-slate-400">
+                              Không có đề thi đang làm dở
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Study Progress */}
+                      <td className="py-3.5 px-4">
                         <div className="font-semibold">
                           {m.answeredUniqueCount} / 110 câu ({pctCovered}%)
                         </div>
@@ -591,72 +754,35 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             className="h-full bg-brand-600"
                           />
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
-                          Tổng {m.user.attempts.length} lượt chấm • Đã xem {m.user.viewedCount}
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Đúng gần nhất:{' '}
+                          <strong className="text-emerald-600 dark:text-emerald-400">
+                            {m.latestAttemptAccuracy !== null ? `${m.latestAttemptAccuracy}%` : '—'}
+                          </strong>{' '}
+                          • Tổng {m.user.attempts.length} lượt
                         </div>
                       </td>
 
-                      <td className="py-3 px-4">
-                        {m.latestAttemptAccuracy !== null ? (
-                          <div>
-                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                              {m.latestAttemptAccuracy}%
-                            </span>
-                            <div className="text-[11px] text-slate-500">
-                              Đúng {m.correctUnassistedLatestCount} • Sai {m.wrongLatestCount}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">Chưa làm</span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4">
-                        {m.firstAttemptAccuracy !== null ? (
-                          <span className="font-semibold">{m.firstAttemptAccuracy}%</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <span className="font-bold">{m.examSessions.length} đề thi</span>
-                        <div className="text-[11px] text-slate-500">
-                          + {m.practiceSessions.length} phiên luyện
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
+                      {/* Exam Results */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold">{m.examSessions.length} đề thi thử</div>
                         {m.bestExamScore !== null ? (
-                          <div>
-                            <span className="font-bold text-purple-600 dark:text-purple-400">
+                          <div className="text-xs text-slate-600 dark:text-slate-300">
+                            Cao nhất:{' '}
+                            <strong className="text-purple-600 dark:text-purple-400">
                               {m.bestExamScore}%
-                            </span>
-                            <div className="text-[11px] text-slate-500">
-                              Gần nhất: {m.latestExamScore}%
-                            </div>
+                            </strong>{' '}
+                            • Gần nhất: <strong>{m.latestExamScore}%</strong>
                           </div>
                         ) : (
-                          <span className="text-slate-400">Chưa thi</span>
+                          <div className="text-[11px] text-slate-400">
+                            + {m.practiceSessions.length} phiên luyện tập
+                          </div>
                         )}
                       </td>
 
-                      <td className="py-3 px-4">
-                        {inProgress ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300">
-                            <Clock className="w-3 h-3" />
-                            <span>{inProgress.title}</span>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">Không</span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                        {new Date(m.user.updatedAt || m.user.lastLoginAt).toLocaleString('vi-VN')}
-                      </td>
-
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
@@ -711,7 +837,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
                     <th className="py-3.5 px-4">Thời gian nộp</th>
-                    <th className="py-3.5 px-4">Người thi</th>
+                    <th className="py-3.5 px-4">Người thi & IP/Máy</th>
                     <th className="py-3.5 px-4">Loại bài & Tên phiên</th>
                     <th className="py-3.5 px-4">Kết quả câu</th>
                     <th className="py-3.5 px-4">Điểm số</th>
@@ -738,9 +864,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
                         <td className="py-3 px-4">
                           <div className="font-bold text-slate-900 dark:text-slate-100">
-                            {entry.displayName}
+                            {entry.displayName} (@{entry.username})
                           </div>
-                          <div className="text-xs font-mono text-slate-500">@{entry.username}</div>
+                          {entry.ipAddress && (
+                            <div className="text-[11px] font-mono text-slate-500">
+                              IP: {entry.ipAddress} • {entry.deviceSummary}
+                            </div>
+                          )}
                         </td>
 
                         <td className="py-3 px-4">
@@ -874,7 +1004,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         </div>
       )}
 
-      {/* MODAL 1: Learner Detailed Profile & Exam History */}
+      {/* MODAL 1: Learner Detailed Profile, Device/IP History & Exam History */}
       {selectedLearner && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
@@ -885,7 +1015,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Hồ sơ học tập: {selectedLearner.user.displayName} (@
+                  Hồ sơ & Thiết bị học viên: {selectedLearner.user.displayName} (@
                   {selectedLearner.user.username})
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -904,6 +1034,80 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
 
             <div className="p-6 overflow-y-auto space-y-6">
+              {/* Device, Network & IP History Card */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Monitor className="w-4 h-4 text-brand-500" />
+                  <span>Thông tin Máy, Mạng, Địa chỉ IP & Trạng thái hiện tại</span>
+                </h4>
+                {selectedLearner.user.telemetry ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500">Địa chỉ IP hiện tại:</span>{' '}
+                      <strong className="font-mono">
+                        {selectedLearner.user.telemetry.ipAddress}
+                      </strong>{' '}
+                      ({selectedLearner.user.telemetry.location})
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Hệ điều hành & Máy:</span>{' '}
+                      <strong>
+                        {selectedLearner.user.telemetry.deviceType} •{' '}
+                        {selectedLearner.user.telemetry.os}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Trình duyệt:</span>{' '}
+                      <strong>{selectedLearner.user.telemetry.browser}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Độ phân giải màn hình:</span>{' '}
+                      <strong>
+                        {selectedLearner.user.telemetry.screenResolution || '—'} (Viewport:{' '}
+                        {selectedLearner.user.telemetry.viewport || '—'})
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Cấu hình phần cứng:</span>{' '}
+                      <strong>
+                        {selectedLearner.user.telemetry.cpuCores
+                          ? `${selectedLearner.user.telemetry.cpuCores} nhân CPU`
+                          : '—'}
+                        {selectedLearner.user.telemetry.deviceMemoryGb
+                          ? ` • ~${selectedLearner.user.telemetry.deviceMemoryGb} GB RAM`
+                          : ''}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Hoạt động vừa ghi nhận:</span>{' '}
+                      <strong className="text-brand-600 dark:text-brand-400">
+                        {selectedLearner.user.telemetry.activityStatus}
+                      </strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">Chưa có bản ghi thiết bị.</p>
+                )}
+
+                {selectedLearner.user.ipHistory && selectedLearner.user.ipHistory.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700 text-xs">
+                    <div className="font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Lịch sử các IP & thiết bị từng đăng nhập:
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedLearner.user.ipHistory.map((h, i) => (
+                        <span
+                          key={i}
+                          className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-[11px]"
+                        >
+                          {h.ip} ({h.device}) • {new Date(h.seenAt).toLocaleString('vi-VN')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Learner's Exam & Practice Sessions */}
               <div>
                 <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3">

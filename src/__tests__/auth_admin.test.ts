@@ -1,10 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   hashPassword,
+  parseUserAgentInfo,
   signToken,
   verifyPassword,
   verifyToken,
 } from '../../api/index';
+import { QUESTIONS } from '../data/questionBank';
+import {
+  getCompletePerOptionRationales,
+  getExamSmartHint,
+  getVietnameseOptionTranslation,
+  getVietnamesePromptSummary,
+} from '../lib/bilingualAndRationale';
 import {
   createInitialProgressState,
   getStorageKeyForUser,
@@ -14,7 +22,7 @@ import {
 } from '../lib/storage';
 import { reconcileUserProgress } from '../lib/auth';
 
-describe('Authentication, Password Hashing, JWT Tokens & Multi-User Progress Isolation', () => {
+describe('Authentication, Telemetry, Bilingual EN/VI & Complete Per-Option Rationales', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
@@ -36,6 +44,51 @@ describe('Authentication, Password Hashing, JWT Tokens & Multi-User Progress Iso
     expect(decoded?.username).toBe('trung');
     expect(decoded?.role).toBe('admin');
     expect(verifyToken(`${token}tampered`)).toBeNull();
+  });
+
+  it('parses device, OS, and browser telemetry from User-Agent strings accurately', () => {
+    const winChrome = parseUserAgentInfo(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36'
+    );
+    expect(winChrome.os).toBe('Windows 10/11');
+    expect(winChrome.browser).toContain('Chrome');
+    expect(winChrome.deviceType).toBe('Desktop');
+
+    const iphoneSafari = parseUserAgentInfo(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Version/17.0 Mobile/15E148 Safari/604.1'
+    );
+    expect(iphoneSafari.os).toBe('iOS / iPadOS');
+    expect(iphoneSafari.deviceType).toBe('Mobile');
+  });
+
+  it('generates complete per-option rationales (why right / why wrong) in EN and VI for every option across all 110 questions', () => {
+    for (const q of QUESTIONS) {
+      const rationales = getCompletePerOptionRationales(q);
+      expect(rationales.length).toBe(q.interaction.options.length);
+
+      for (const rat of rationales) {
+        expect(rat.englishReason.trim().length).toBeGreaterThan(10);
+        expect(rat.vietnameseReason.trim().length).toBeGreaterThan(10);
+        if (q.interaction.correctOptionIds.includes(rat.optionId)) {
+          expect(rat.isCorrect).toBe(true);
+          expect(rat.vietnameseReason).toContain('ĐÚNG');
+        } else {
+          expect(rat.isCorrect).toBe(false);
+          expect(rat.vietnameseReason).toContain('SAI');
+        }
+      }
+
+      const viPrompt = getVietnamesePromptSummary(q);
+      expect(viPrompt.trim().length).toBeGreaterThan(15);
+
+      const hint = getExamSmartHint(q);
+      expect(hint.guidingPrincipleVi.length).toBeGreaterThan(10);
+      expect(hint.keyClues.length).toBeGreaterThan(0);
+
+      for (const opt of q.interaction.options) {
+        expect(getVietnameseOptionTranslation(opt).trim().length).toBeGreaterThan(5);
+      }
+    }
   });
 
   it('isolates study progress in localStorage per username so multiple learners do not overwrite each other', () => {

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   apiFetchMe,
+  apiSendHeartbeat,
   apiSyncProgress,
   loadStoredAuthSession,
   reconcileUserProgress,
@@ -124,6 +125,55 @@ export const App: React.FC = () => {
   }, [authSession?.token]);
 
   const syncTimeoutRef = useRef<number | null>(null);
+
+  // Build human-readable activity description for live admin telemetry
+  const currentActivityDescription = useMemo(() => {
+    const sess = state.activeSession;
+    if (activeTab === 'exam' && sess && sess.mode === 'exam' && sess.status === 'in_progress') {
+      const idx = sess.questionOrder.indexOf(sess.currentQuestionId) + 1;
+      const ans = Object.keys(sess.selections || {}).length;
+      return `Đang Thi thử: Câu ${idx}/${sess.questionOrder.length} (Đã chọn ${ans} câu)`;
+    }
+    if (
+      activeTab === 'practice' &&
+      sess &&
+      sess.mode === 'practice' &&
+      sess.status === 'in_progress'
+    ) {
+      const idx = sess.questionOrder.indexOf(sess.currentQuestionId) + 1;
+      return `Đang Luyện tập: Câu ${idx}/${sess.questionOrder.length}`;
+    }
+    if (activeTab === 'study') {
+      return `Đang Học từng câu (${state.lastStudiedQuestionId || 'ccdv-f-q001'})`;
+    }
+    if (activeTab === 'review') return 'Đang xem Lịch ôn & Câu sai';
+    if (activeTab === 'library') return 'Đang tra cứu Thư viện 110 câu';
+    if (activeTab === 'admin') return 'Đang mở Admin Dashboard';
+    return 'Đang xem Tổng quan';
+  }, [activeTab, state.activeSession, state.lastStudiedQuestionId]);
+
+  // Periodic & reactive heartbeat for live online status, device, IP & exam tracking
+  useEffect(() => {
+    if (!authSession?.token) return;
+    const sendPulse = () => {
+      apiSendHeartbeat(authSession.token, {
+        currentTab: activeTab,
+        activityStatus: currentActivityDescription,
+        currentQuestionId:
+          state.activeSession?.currentQuestionId || state.lastStudiedQuestionId || null,
+      }).catch(() => {});
+    };
+
+    sendPulse();
+    const intervalId = window.setInterval(sendPulse, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [
+    authSession?.token,
+    activeTab,
+    currentActivityDescription,
+    state.activeSession?.currentQuestionId,
+    state.lastStudiedQuestionId,
+  ]);
 
   const scheduleCloudSync = useCallback(
     (nextState: AppProgressState, token: string | null) => {

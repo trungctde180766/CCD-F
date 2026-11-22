@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   Bookmark,
   CheckCircle2,
   Eye,
+  EyeOff,
   Flag,
+  Globe,
   HelpCircle,
   Info,
+  Lightbulb,
   MessageSquarePlus,
   RotateCcw,
   Sparkles,
@@ -15,6 +18,17 @@ import {
 } from 'lucide-react';
 import type { Question, StudyMode } from '../types';
 import { gradeQuestion } from '../lib/scoring';
+import {
+  getCompletePerOptionRationales,
+  getExamSmartHint,
+  getVietnameseOptionTranslation,
+  getVietnamesePromptSummary,
+  LanguageDisplayMode,
+  loadLanguageDisplayMode,
+  saveLanguageDisplayMode,
+  translateTechnicalEnglishToVietnamese,
+} from '../lib/bilingualAndRationale';
+import { extractBlockText } from '../data/questionBank';
 import { BlockRenderer } from './BlockRenderer';
 
 export interface QuestionCardProps {
@@ -46,11 +60,11 @@ export interface QuestionCardProps {
 }
 
 /**
- * Core Question Card component.
- * STRICT ANTI-SPOILER GUARANTEE:
- * When `isSubmittedOrRevealed === false`:
- * - Correct answers (`correctOptionIds`), general `explanation`, and `optionExplanations`
- *   are NEVER rendered or referenced in the DOM, attributes, classNames, or ARIA labels.
+ * Core Question Card component with:
+ * - Bilingual EN / EN+VI / VI support (including during Mock Exam)
+ * - Smart Exam Assistant Toolkit (Hint, Option Elimination Strikethrough, Optional Instant Check in Exam)
+ * - Complete Per-Option Rationales ("Vì sao câu này đúng / Vì sao câu này sai") for all 110 questions
+ * - Strict anti-spoiler DOM guarantee before checking/revealing
  */
 export const QuestionCard: React.FC<QuestionCardProps> = ({
   question,
@@ -76,30 +90,62 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   hasPrev = false,
   hasNext = false,
 }) => {
+  const [langMode, setLangMode] = useState<LanguageDisplayMode>(() =>
+    loadLanguageDisplayMode()
+  );
+  const [showSmartHint, setShowSmartHint] = useState<boolean>(false);
+  const [eliminatedOptionIds, setEliminatedOptionIds] = useState<Record<string, boolean>>({});
+  const [examInstantPeek, setExamInstantPeek] = useState<boolean>(false);
+
   const [isNoteOpen, setIsNoteOpen] = useState<boolean>(Boolean(noteText.trim()));
   const [draftNote, setDraftNote] = useState<string>(noteText);
   const [noteSavedToast, setNoteSavedToast] = useState<boolean>(false);
 
-  // Sync draftNote when question changes
-  React.useEffect(() => {
+  // Reset per-question transient assistant state when question changes
+  useEffect(() => {
     setDraftNote(noteText);
     setIsNoteOpen(Boolean(noteText.trim()));
     setNoteSavedToast(false);
+    setShowSmartHint(false);
+    setEliminatedOptionIds({});
+    setExamInstantPeek(false);
   }, [question.id, noteText]);
+
+  const handleChangeLangMode = (nextMode: LanguageDisplayMode) => {
+    setLangMode(nextMode);
+    saveLanguageDisplayMode(nextMode);
+  };
+
+  const toggleEliminateOption = (optId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEliminatedOptionIds((prev) => ({
+      ...prev,
+      [optId]: !prev[optId],
+    }));
+  };
 
   const isMultiple = question.interaction.type === 'multiple_choice';
 
-  // Only compute grading details when isSubmittedOrRevealed is true!
-  const gradeResult = isSubmittedOrRevealed
+  // Effective reveal status: either formally submitted/revealed OR user clicked "Trợ giúp xem giải ngay trong lúc thi"
+  const effectiveRevealed = isSubmittedOrRevealed || examInstantPeek;
+
+  // Only compute grading details and rationales when effectiveRevealed is true!
+  const gradeResult = effectiveRevealed
     ? gradeQuestion(question, selectedOptionIds)
     : null;
 
-  const optionExplanationMap = React.useMemo(() => {
-    if (!isSubmittedOrRevealed) return new Map<string, Question['optionExplanations'][number]>();
-    return new Map(
-      (question.optionExplanations || []).map((oe) => [oe.optionId, oe])
-    );
-  }, [isSubmittedOrRevealed, question.optionExplanations]);
+  const perOptionRationales = useMemo(() => {
+    if (!effectiveRevealed) return [];
+    return getCompletePerOptionRationales(question);
+  }, [effectiveRevealed, question]);
+
+  const perOptionRationaleMap = useMemo(() => {
+    return new Map(perOptionRationales.map((r) => [r.optionId, r]));
+  }, [perOptionRationales]);
+
+  const smartHint = useMemo(() => getExamSmartHint(question), [question]);
+  const viPromptSummary = useMemo(() => getVietnamesePromptSummary(question), [question]);
 
   const handleNoteSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +158,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     !question.difficulty || question.difficulty === 'unspecified'
       ? 'Chưa phân loại'
       : question.difficulty;
+
+  const showEnglish = langMode === 'en' || langMode === 'bilingual';
+  const showVietnamese = langMode === 'vi' || langMode === 'bilingual';
 
   return (
     <article
@@ -146,12 +195,73 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Right Controls: Language Switcher (EN / Song ngữ / VI) + Exam Assistant + Bookmark + Note */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* Bilingual Switcher — Available in Study, Practice, AND Exam modes! */}
+          <div
+            className="inline-flex items-center rounded-lg p-0.5 bg-slate-200/80 dark:bg-slate-800 border border-slate-300/80 dark:border-slate-700 text-xs"
+            role="group"
+            aria-label="Chế độ ngôn ngữ hiển thị"
+          >
+            <Globe className="w-3.5 h-3.5 ml-1.5 mr-1 text-brand-600 dark:text-brand-400 shrink-0" />
+            <button
+              type="button"
+              onClick={() => handleChangeLangMode('en')}
+              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+                langMode === 'en'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+              title="Chỉ hiển thị tiếng Anh gốc"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => handleChangeLangMode('bilingual')}
+              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+                langMode === 'bilingual'
+                  ? 'bg-brand-600 text-white shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+              title="Song ngữ Anh – Việt (Hỗ trợ dịch ngay trong lúc thi & học)"
+            >
+              Song ngữ EN+VI
+            </button>
+            <button
+              type="button"
+              onClick={() => handleChangeLangMode('vi')}
+              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+                langMode === 'vi'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+              title="Ưu tiên hiển thị bản dịch tiếng Việt"
+            >
+              VI
+            </button>
+          </div>
+
+          {/* Smart Hint Button (Works in Exam, Practice & Study) */}
+          <button
+            type="button"
+            onClick={() => setShowSmartHint((prev) => !prev)}
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              showSmartHint
+                ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+            }`}
+            title="Gợi ý hướng tư duy & từ khóa trọng tâm cho câu hỏi này"
+          >
+            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+            <span>Gợi ý</span>
+          </button>
+
           {mode === 'exam' && onToggleExamFlag && (
             <button
               type="button"
               onClick={onToggleExamFlag}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                 isFlaggedForExam
                   ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -159,14 +269,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               aria-pressed={isFlaggedForExam}
             >
               <Flag className={`w-3.5 h-3.5 ${isFlaggedForExam ? 'fill-current' : ''}`} />
-              <span>{isFlaggedForExam ? 'Đã gắn cờ xem lại' : 'Đánh dấu xem lại'}</span>
+              <span>{isFlaggedForExam ? 'Đã gắn cờ' : 'Đánh dấu xem lại'}</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={onToggleBookmark}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 ${
               isBookmarked
                 ? 'bg-brand-100 text-brand-800 dark:bg-brand-950/80 dark:text-brand-300 border border-brand-300 dark:border-brand-800'
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -181,7 +291,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           <button
             type="button"
             onClick={() => setIsNoteOpen((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 ${
               noteText.trim()
                 ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -218,7 +328,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         )}
       </div>
 
-      {/* Question Prompt */}
+      {/* Question Prompt & Options */}
       <div className="p-4 sm:p-6">
         <h2
           id={`question-heading-${question.id}`}
@@ -230,9 +340,54 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </span>
         </h2>
 
-        <div className="mb-6">
-          <BlockRenderer blocks={question.prompt} />
-        </div>
+        {/* Smart Exam Hint Drawer (Non-spoiler guidance) */}
+        {showSmartHint && (
+          <div className="mb-5 p-4 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs sm:text-sm text-amber-950 dark:text-amber-100 space-y-2">
+            <div className="font-bold flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5">
+                <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Gợi ý tư duy & Từ khóa trọng tâm (Hỗ trợ làm bài)</span>
+              </span>
+              <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                Mảng: {smartHint.topicFocusVi}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-semibold">Từ khóa mấu chốt:</span>
+              {smartHint.keyClues.map((clue, i) => (
+                <code
+                  key={i}
+                  className="px-2 py-0.5 rounded bg-amber-200/70 dark:bg-amber-900/70 font-mono text-xs font-semibold"
+                >
+                  {clue}
+                </code>
+              ))}
+            </div>
+            <p className="text-xs sm:text-sm leading-relaxed text-amber-900 dark:text-amber-200">
+              <strong>Nguyên tắc gợi mở:</strong> {smartHint.guidingPrincipleVi}
+            </p>
+          </div>
+        )}
+
+        {/* English Prompt */}
+        {showEnglish && (
+          <div className="mb-4">
+            <BlockRenderer blocks={question.prompt} />
+          </div>
+        )}
+
+        {/* Vietnamese Prompt Support (Works in Study, Practice, AND Mock Exam!) */}
+        {showVietnamese && (
+          <div className="mb-6 p-3.5 sm:p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/60 text-slate-800 dark:text-slate-200">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-1 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              <span>Bản dịch hỗ trợ đọc hiểu đề bài (Tiếng Việt)</span>
+            </div>
+            <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-line break-words">
+              {viPromptSummary}
+            </p>
+          </div>
+        )}
 
         {isMultiple && (
           <div className="mb-4 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-center gap-2.5 text-xs sm:text-sm text-amber-900 dark:text-amber-200">
@@ -252,6 +407,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
           {question.interaction.options.map((option) => {
             const isSelected = selectedOptionIds.includes(option.id);
+            const isEliminated = Boolean(eliminatedOptionIds[option.id]);
             const inputId = `opt-${question.id}-${option.id}`;
 
             // Anti-spoiler styling: only compute correct/wrong styles after submission/reveal
@@ -260,10 +416,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             let badgeText: string | null = null;
             let badgeStyle = '';
 
-            if (!isSubmittedOrRevealed) {
+            if (!effectiveRevealed) {
               if (isSelected) {
                 containerStyle =
                   'border-brand-500 dark:border-brand-500 bg-brand-50/60 dark:bg-brand-950/30 ring-1 ring-brand-500';
+              } else if (isEliminated) {
+                containerStyle =
+                  'border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/40 opacity-50';
               }
             } else if (gradeResult) {
               const isCorrectOption = gradeResult.correctOptionIds.includes(option.id);
@@ -286,75 +445,151 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 badgeStyle = 'bg-rose-100 text-rose-900 dark:bg-rose-900/60 dark:text-rose-200';
               } else {
                 containerStyle =
-                  'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 opacity-85';
+                  'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 opacity-90';
+                badgeText = 'Phương án nhiễu (Sai)';
+                badgeStyle = 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
               }
             }
 
-            const perOptionExp = isSubmittedOrRevealed
-              ? optionExplanationMap.get(option.id)
+            const optionRationale = effectiveRevealed
+              ? perOptionRationaleMap.get(option.id)
               : undefined;
+            const viOptionText = showVietnamese
+              ? getVietnameseOptionTranslation(option)
+              : '';
 
             return (
               <div
                 key={option.id}
                 className={`rounded-xl border transition-all ${containerStyle}`}
               >
-                <label
-                  htmlFor={inputId}
-                  className={`flex items-start gap-3.5 p-3.5 sm:p-4 ${
-                    isLocked ? 'cursor-default' : 'cursor-pointer'
-                  }`}
-                >
-                  <div className="pt-0.5 flex items-center">
-                    <input
-                      id={inputId}
-                      type={isMultiple ? 'checkbox' : 'radio'}
-                      name={`question-${question.id}`}
-                      value={option.id}
-                      checked={isSelected}
-                      disabled={isLocked}
-                      onChange={() => {
-                        if (!isLocked) {
-                          onSelectOption(option.id);
-                        }
-                      }}
-                      className="w-4 h-4 text-brand-600 border-slate-300 dark:border-slate-600 focus:ring-brand-500"
-                    />
-                  </div>
+                <div className="flex items-start justify-between gap-2 p-3.5 sm:p-4">
+                  <label
+                    htmlFor={inputId}
+                    className={`flex items-start gap-3.5 flex-1 min-w-0 ${
+                      isLocked ? 'cursor-default' : 'cursor-pointer'
+                    }`}
+                  >
+                    <div className="pt-0.5 flex items-center">
+                      <input
+                        id={inputId}
+                        type={isMultiple ? 'checkbox' : 'radio'}
+                        name={`question-${question.id}`}
+                        value={option.id}
+                        checked={isSelected}
+                        disabled={isLocked}
+                        onChange={() => {
+                          if (!isLocked) {
+                            onSelectOption(option.id);
+                          }
+                        }}
+                        className="w-4 h-4 text-brand-600 border-slate-300 dark:border-slate-600 focus:ring-brand-500"
+                      />
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                      <span className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
-                        <span>Phương án {option.id.toUpperCase()}</span>
-                      </span>
-
-                      {isSubmittedOrRevealed && badgeText && (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeStyle}`}
-                        >
-                          {gradeResult?.correctOptionIds.includes(option.id) ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5" />
-                          )}
-                          <span>{badgeText}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                        <span className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
+                          <span>Phương án {option.id.toUpperCase()}</span>
                         </span>
+
+                        {effectiveRevealed && badgeText && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeStyle}`}
+                          >
+                            {gradeResult?.correctOptionIds.includes(option.id) ? (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            ) : (
+                              <XCircle className="w-3.5 h-3.5" />
+                            )}
+                            <span>{badgeText}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {showEnglish && (
+                        <div
+                          className={`text-[15px] sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed break-words ${
+                            !effectiveRevealed && isEliminated ? 'line-through' : ''
+                          }`}
+                        >
+                          {option.label}
+                        </div>
+                      )}
+
+                      {showVietnamese && (
+                        <div
+                          className={`mt-1.5 text-xs sm:text-sm text-indigo-900/90 dark:text-indigo-200/90 bg-indigo-50/50 dark:bg-indigo-950/30 px-2.5 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50 leading-relaxed break-words ${
+                            !effectiveRevealed && isEliminated ? 'line-through' : ''
+                          }`}
+                        >
+                          <span className="font-semibold text-indigo-700 dark:text-indigo-300 mr-1">
+                            [VI]
+                          </span>
+                          {viOptionText}
+                        </div>
                       )}
                     </div>
+                  </label>
 
-                    <div className="text-[15px] sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed break-words">
-                      {option.label}
-                    </div>
-                  </div>
-                </label>
+                  {/* Option Elimination Button during Exam / Study before checking */}
+                  {!effectiveRevealed && !isLocked && (
+                    <button
+                      type="button"
+                      onClick={(e) => toggleEliminateOption(option.id, e)}
+                      title={
+                        isEliminated
+                          ? 'Bỏ gạch ngang phương án này'
+                          : 'Loại trừ / gạch mờ phương án nhiễu này'
+                      }
+                      className={`p-1.5 rounded-lg text-xs font-medium border shrink-0 transition-colors ${
+                        isEliminated
+                          ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:text-slate-700 dark:bg-slate-800 dark:border-slate-700'
+                      }`}
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-                {/* Per-option explanation if revealed and provided by source */}
-                {isSubmittedOrRevealed && perOptionExp && (
-                  <div className="mx-3.5 sm:mx-4 mb-3.5 p-3 rounded-lg bg-white/90 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm">
-                    <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Giải thích riêng cho phương án {option.id.toUpperCase()}:
+                {/* Per-option explanation ("Vì sao ĐÚNG / Vì sao SAI") rendered for EVERY option when revealed! */}
+                {effectiveRevealed && optionRationale && (
+                  <div
+                    className={`mx-3.5 sm:mx-4 mb-3.5 p-3 rounded-lg border text-xs sm:text-sm space-y-1.5 ${
+                      optionRationale.isCorrect
+                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                        : 'bg-white/95 dark:bg-slate-950/70 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                    }`}
+                  >
+                    <div className="font-bold flex items-center gap-1.5">
+                      {optionRationale.isCorrect ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                      )}
+                      <span>
+                        {optionRationale.isCorrect
+                          ? `Vì sao phương án ${option.id.toUpperCase()} ĐÚNG:`
+                          : `Vì sao phương án ${option.id.toUpperCase()} SAI (${optionRationale.flawCategoryVi}):`}
+                      </span>
                     </div>
-                    <BlockRenderer blocks={perOptionExp.content} />
+
+                    {showEnglish && (
+                      <div className="text-slate-700 dark:text-slate-300">
+                        {optionRationale.sourceBlocks ? (
+                          <BlockRenderer blocks={optionRationale.sourceBlocks} />
+                        ) : (
+                          <p>{optionRationale.englishReason}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {showVietnamese && (
+                      <p className="text-indigo-950 dark:text-indigo-200 font-medium pt-0.5">
+                        🇻🇳 {optionRationale.vietnameseReason}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -362,7 +597,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           })}
         </fieldset>
 
-        {/* Action Buttons Bar (Check / Reveal / Retry / Prev / Next) */}
+        {/* Action Buttons Bar (Check / Reveal / Exam Instant Help / Retry / Prev / Next) */}
         <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
             {mode !== 'exam' && !isSubmittedOrRevealed && onCheckAnswer && (
@@ -386,6 +621,27 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               >
                 <Eye className="w-4 h-4" />
                 <span>Xem đáp án trước</span>
+              </button>
+            )}
+
+            {/* Helpful Assistant Button during Mock Exam: Let learner peek at explanation for current question if they want instant help! */}
+            {mode === 'exam' && !isSubmittedOrRevealed && (
+              <button
+                type="button"
+                onClick={() => setExamInstantPeek((prev) => !prev)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition-colors ${
+                  examInstantPeek
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-800'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+                }`}
+                title="Hỗ trợ trong lúc thi: Xem đáp án & giải thích vì sao đúng/sai ngay cho câu hỏi này"
+              >
+                <Eye className="w-4 h-4" />
+                <span>
+                  {examInstantPeek
+                    ? 'Ẩn trợ giải thích câu này'
+                    : 'Trợ giúp thi: Xem đáp án & giải thích câu này'}
+                </span>
               </button>
             )}
 
@@ -475,8 +731,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </form>
         )}
 
-        {/* Graded Result & Full Explanation Panel — ONLY mounted in DOM when isSubmittedOrRevealed is true */}
-        {isSubmittedOrRevealed && gradeResult && (
+        {/* Graded Result & Full Explanation Panel — ONLY mounted in DOM when effectiveRevealed is true */}
+        {effectiveRevealed && gradeResult && (
           <div
             role="status"
             aria-live="polite"
@@ -485,7 +741,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             {/* Status Banner */}
             <div
               className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                revealedBeforeCheck
+                revealedBeforeCheck || examInstantPeek
                   ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-100'
                   : gradeResult.isCorrect
                   ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100'
@@ -493,7 +749,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               }`}
             >
               <div className="flex items-start gap-3">
-                {revealedBeforeCheck ? (
+                {revealedBeforeCheck || examInstantPeek ? (
                   <Eye className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 ) : gradeResult.isCorrect ? (
                   <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -502,7 +758,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 )}
                 <div>
                   <div className="font-bold text-base">
-                    {revealedBeforeCheck
+                    {examInstantPeek
+                      ? 'Đang xem Trợ giúp Giải thích trong lúc thi'
+                      : revealedBeforeCheck
                       ? 'Đã xem lời giải trước khi kiểm tra (Không tính là trả lời đúng tự lực)'
                       : gradeResult.isCorrect
                       ? 'Chính xác! Bạn đã chọn đúng toàn bộ đáp án.'
@@ -563,9 +821,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </div>
             )}
 
-            {/* Main Explanation from Source */}
-            <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center justify-between gap-2 mb-3">
+            {/* Main Explanation from Source (English + Vietnamese Bilingual Summary) */}
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-brand-500" />
                   <span>Giải thích chi tiết từ nguồn (Explanation)</span>
@@ -574,47 +832,71 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   Nguồn: {question.source?.name || 'T-Study'} • Chưa thẩm định độc lập
                 </span>
               </div>
-              <BlockRenderer blocks={question.explanation} />
+
+              {showEnglish && <BlockRenderer blocks={question.explanation} />}
+
+              {showVietnamese && (
+                <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-xs sm:text-sm text-indigo-950 dark:text-indigo-100 space-y-1">
+                  <div className="font-bold text-indigo-800 dark:text-indigo-300">
+                    🇻🇳 Tóm tắt giải thích Tiếng Việt:
+                  </div>
+                  <p className="leading-relaxed whitespace-pre-line">
+                    {translateTechnicalEnglishToVietnamese(extractBlockText(question.explanation))}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Per-option explanations summary if source provided them */}
-            {question.optionExplanations && question.optionExplanations.length > 0 && (
-              <div className="p-4 sm:p-5 rounded-xl bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-brand-500" />
-                  <span>Phân tích từng phương án (Per-Option Rationale)</span>
-                </h3>
-                <div className="space-y-3">
-                  {question.optionExplanations.map((oe) => {
-                    const isOptCorrect = gradeResult.correctOptionIds.includes(oe.optionId);
-                    return (
-                      <div
-                        key={oe.optionId}
-                        className={`p-3 rounded-lg border ${
-                          isOptCorrect
-                            ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/60'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                        }`}
+            {/* Complete Per-Option Analysis ("Vì sao câu này đúng / Vì sao câu này sai") for ALL 110 questions */}
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
+                <HelpCircle className="w-4 h-4 text-brand-500" />
+                <span>
+                  Giải thích chi tiết Vì sao Đúng / Vì sao Sai cho từng phương án (A, B, C, D...)
+                </span>
+              </h3>
+              <div className="space-y-3">
+                {perOptionRationales.map((rat) => (
+                  <div
+                    key={rat.optionId}
+                    className={`p-3.5 rounded-xl border ${
+                      rat.isCorrect
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="font-mono text-xs font-bold mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                      <span
+                        className={
+                          rat.isCorrect
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : 'text-rose-700 dark:text-rose-400'
+                        }
                       >
-                        <div className="font-mono text-xs font-bold mb-1 flex items-center gap-2">
-                          <span
-                            className={
-                              isOptCorrect
-                                ? 'text-emerald-700 dark:text-emerald-400'
-                                : 'text-slate-700 dark:text-slate-300'
-                            }
-                          >
-                            Phương án {oe.optionId.toUpperCase()}{' '}
-                            {isOptCorrect ? '(Đáp án đúng)' : '(Phương án nhiễu)'}
-                          </span>
-                        </div>
-                        <BlockRenderer blocks={oe.content} />
+                        Phương án {rat.optionId.toUpperCase()} —{' '}
+                        {rat.isCorrect ? '✓ ĐÁP ÁN ĐÚNG' : `✗ PHƯƠNG ÁN SAI (${rat.flawCategoryVi})`}
+                      </span>
+                    </div>
+
+                    {showEnglish && (
+                      <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 mb-1.5">
+                        {rat.sourceBlocks ? (
+                          <BlockRenderer blocks={rat.sourceBlocks} />
+                        ) : (
+                          <p>{rat.englishReason}</p>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+
+                    {showVietnamese && (
+                      <p className="text-xs sm:text-sm text-indigo-950 dark:text-indigo-200 font-medium">
+                        🇻🇳 {rat.vietnameseReason}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
