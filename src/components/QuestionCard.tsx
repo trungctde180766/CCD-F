@@ -21,14 +21,13 @@ import { gradeQuestion } from '../lib/scoring';
 import {
   getCompletePerOptionRationales,
   getExamSmartHint,
+  getVietnameseExplanation,
   getVietnameseOptionTranslation,
   getVietnamesePromptSummary,
   LanguageDisplayMode,
   loadLanguageDisplayMode,
   saveLanguageDisplayMode,
-  translateTechnicalEnglishToVietnamese,
 } from '../lib/bilingualAndRationale';
-import { extractBlockText } from '../data/questionBank';
 import { BlockRenderer } from './BlockRenderer';
 
 export interface QuestionCardProps {
@@ -455,7 +454,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               ? perOptionRationaleMap.get(option.id)
               : undefined;
             const viOptionText = showVietnamese
-              ? getVietnameseOptionTranslation(option)
+              ? getVietnameseOptionTranslation(option, question.id)
               : '';
 
             return (
@@ -838,10 +837,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               {showVietnamese && (
                 <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-xs sm:text-sm text-indigo-950 dark:text-indigo-100 space-y-1">
                   <div className="font-bold text-indigo-800 dark:text-indigo-300">
-                    🇻🇳 Tóm tắt giải thích Tiếng Việt:
+                    🇻🇳 Giải thích đầy đủ bằng Tiếng Việt:
                   </div>
                   <p className="leading-relaxed whitespace-pre-line">
-                    {translateTechnicalEnglishToVietnamese(extractBlockText(question.explanation))}
+                    {getVietnameseExplanation(question)}
                   </p>
                 </div>
               )}

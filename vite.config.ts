@@ -34,6 +34,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('questions.vi.json')) {
+            return 'question-bank-vi';
+          }
           if (id.includes('questions.json')) {
             return 'question-bank';
           }

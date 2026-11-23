@@ -11,8 +11,10 @@ import { QUESTIONS } from '../data/questionBank';
 import {
   getCompletePerOptionRationales,
   getExamSmartHint,
+  getVietnameseExplanation,
   getVietnameseOptionTranslation,
   getVietnamesePromptSummary,
+  QUESTIONS_VI,
 } from '../lib/bilingualAndRationale';
 import {
   createInitialProgressState,
@@ -62,8 +64,16 @@ describe('Authentication, Telemetry, Bilingual EN/VI & Complete Per-Option Ratio
     expect(iphoneSafari.deviceType).toBe('Mobile');
   });
 
-  it('generates complete per-option rationales (why right / why wrong) in EN and VI for every option across all 110 questions', () => {
+  it('generates complete fluent Vietnamese translations and per-option rationales for ALL 110 questions and every option', () => {
+    expect(Object.keys(QUESTIONS_VI).length).toBe(110);
+
     for (const q of QUESTIONS) {
+      const viEntry = QUESTIONS_VI[q.id];
+      expect(viEntry).toBeDefined();
+      expect(viEntry.promptVi.trim().length).toBeGreaterThan(20);
+      expect(viEntry.explanationVi.trim().length).toBeGreaterThan(20);
+      expect(getVietnameseExplanation(q)).toBe(viEntry.explanationVi);
+
       const rationales = getCompletePerOptionRationales(q);
       expect(rationales.length).toBe(q.interaction.options.length);
 
@@ -72,22 +82,24 @@ describe('Authentication, Telemetry, Bilingual EN/VI & Complete Per-Option Ratio
         expect(rat.vietnameseReason.trim().length).toBeGreaterThan(10);
         if (q.interaction.correctOptionIds.includes(rat.optionId)) {
           expect(rat.isCorrect).toBe(true);
-          expect(rat.vietnameseReason).toContain('ĐÚNG');
+          expect(rat.vietnameseReason.startsWith('Đúng')).toBe(true);
         } else {
           expect(rat.isCorrect).toBe(false);
-          expect(rat.vietnameseReason).toContain('SAI');
+          expect(rat.vietnameseReason.startsWith('Sai')).toBe(true);
         }
       }
 
       const viPrompt = getVietnamesePromptSummary(q);
-      expect(viPrompt.trim().length).toBeGreaterThan(15);
+      expect(viPrompt.trim().length).toBeGreaterThan(20);
 
       const hint = getExamSmartHint(q);
       expect(hint.guidingPrincipleVi.length).toBeGreaterThan(10);
       expect(hint.keyClues.length).toBeGreaterThan(0);
 
       for (const opt of q.interaction.options) {
-        expect(getVietnameseOptionTranslation(opt).trim().length).toBeGreaterThan(5);
+        const viOpt = getVietnameseOptionTranslation(opt, q.id);
+        expect(viOpt.trim().length).toBeGreaterThan(5);
+        expect(viEntry.optionsVi[opt.id]).toBe(viOpt);
       }
     }
   });
