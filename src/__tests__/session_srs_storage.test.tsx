@@ -64,11 +64,12 @@ describe('BlockRenderer & Anti-Spoiler DOM Guarantees', () => {
     );
 
     // Before submission, explanation text and "Đáp án đúng" must not exist anywhere in DOM
-    expect(container.textContent).not.toContain('Correct answer from the source');
+    expect(container.textContent).not.toContain('Giải thích chi tiết');
+    expect(container.textContent).not.toContain('Đáp án đúng là C');
     expect(container.textContent).not.toContain('Đáp án đúng theo nguồn');
     expect(container.innerHTML).not.toContain('emerald-500');
 
-    // After submission, explanation and correct answer are rendered
+    // After submission, explanation is shown exclusively in Vietnamese (no English explanation)
     rerender(
       <QuestionCard
         question={q001}
@@ -84,8 +85,10 @@ describe('BlockRenderer & Anti-Spoiler DOM Guarantees', () => {
       />
     );
 
-    expect(container.textContent).toContain('Correct answer from the source');
+    expect(container.textContent).toContain('Giải thích chi tiết');
+    expect(container.textContent).toContain('Đáp án đúng là C');
     expect(container.textContent).toContain('Đáp án đúng theo nguồn');
+    expect(container.textContent).not.toContain('Correct answer from the source');
   });
 });
 

@@ -574,21 +574,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       </span>
                     </div>
 
-                    {showEnglish && (
-                      <div className="text-slate-700 dark:text-slate-300">
-                        {optionRationale.sourceBlocks ? (
-                          <BlockRenderer blocks={optionRationale.sourceBlocks} />
-                        ) : (
-                          <p>{optionRationale.englishReason}</p>
-                        )}
-                      </div>
-                    )}
-
-                    {showVietnamese && (
-                      <p className="text-indigo-950 dark:text-indigo-200 font-medium pt-0.5">
-                        🇻🇳 {optionRationale.vietnameseReason}
-                      </p>
-                    )}
+                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed pt-0.5">
+                      {optionRationale.vietnameseReason}
+                    </p>
                   </div>
                 )}
               </div>
@@ -820,30 +808,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </div>
             )}
 
-            {/* Main Explanation (English + Vietnamese Bilingual Summary) */}
-            <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-4">
+            {/* Main Explanation (100% Vietnamese) */}
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-brand-500" />
-                  <span>Giải thích chi tiết (Explanation)</span>
+                  <span>Giải thích chi tiết</span>
                 </h3>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Bộ câu hỏi luyện tập CCDV-F
+                  Tiếng Việt • Bộ câu hỏi CCDV-F
                 </span>
               </div>
 
-              {showEnglish && <BlockRenderer blocks={question.explanation} />}
-
-              {showVietnamese && (
-                <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-xs sm:text-sm text-indigo-950 dark:text-indigo-100 space-y-1">
-                  <div className="font-bold text-indigo-800 dark:text-indigo-300">
-                    🇻🇳 Giải thích đầy đủ bằng Tiếng Việt:
-                  </div>
-                  <p className="leading-relaxed whitespace-pre-line">
-                    {getVietnameseExplanation(question)}
-                  </p>
-                </div>
-              )}
+              <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-sm text-indigo-950 dark:text-indigo-100">
+                <p className="leading-relaxed whitespace-pre-line">
+                  {getVietnameseExplanation(question)}
+                </p>
+              </div>
             </div>
 
             {/* Complete Per-Option Analysis ("Vì sao câu này đúng / Vì sao câu này sai") for ALL 110 questions */}
@@ -877,21 +858,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       </span>
                     </div>
 
-                    {showEnglish && (
-                      <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 mb-1.5">
-                        {rat.sourceBlocks ? (
-                          <BlockRenderer blocks={rat.sourceBlocks} />
-                        ) : (
-                          <p>{rat.englishReason}</p>
-                        )}
-                      </div>
-                    )}
-
-                    {showVietnamese && (
-                      <p className="text-xs sm:text-sm text-indigo-950 dark:text-indigo-200 font-medium">
-                        🇻🇳 {rat.vietnameseReason}
-                      </p>
-                    )}
+                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+                      {rat.vietnameseReason}
+                    </p>
                   </div>
                 ))}
               </div>

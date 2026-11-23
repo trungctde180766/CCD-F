@@ -93,6 +93,7 @@ describe('Full Application UI End-to-End Flow (Mandatory Auth Gate + Persistent 
     // Verify timer, Reset button, and hidden answers
     expect(screen.getByRole('timer')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Reset thi lại/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Giải thích chi tiết/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Correct answer from the source/i)).not.toBeInTheDocument();
 
     // Submit exam
