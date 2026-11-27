@@ -15,12 +15,14 @@ import {
   Sparkles,
   Tag,
   XCircle,
+  Zap,
 } from 'lucide-react';
 import type { Question, StudyMode } from '../types';
 import { gradeQuestion } from '../lib/scoring';
 import {
   getCompletePerOptionRationales,
   getExamSmartHint,
+  getMemoryKeywordHook,
   getVietnameseExplanation,
   getVietnameseOptionTranslation,
   getVietnamesePromptSummary,
@@ -93,6 +95,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     loadLanguageDisplayMode()
   );
   const [showSmartHint, setShowSmartHint] = useState<boolean>(false);
+  const [showMemoryKeyword, setShowMemoryKeyword] = useState<boolean>(false);
   const [eliminatedOptionIds, setEliminatedOptionIds] = useState<Record<string, boolean>>({});
   const [examInstantPeek, setExamInstantPeek] = useState<boolean>(false);
 
@@ -106,6 +109,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     setIsNoteOpen(Boolean(noteText.trim()));
     setNoteSavedToast(false);
     setShowSmartHint(false);
+    setShowMemoryKeyword(false);
     setEliminatedOptionIds({});
     setExamInstantPeek(false);
   }, [question.id, noteText]);
@@ -144,6 +148,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }, [perOptionRationales]);
 
   const smartHint = useMemo(() => getExamSmartHint(question), [question]);
+  const memoryHook = useMemo(() => getMemoryKeywordHook(question), [question]);
   const viPromptSummary = useMemo(() => getVietnamesePromptSummary(question), [question]);
 
   const handleNoteSave = (e: React.FormEvent) => {
@@ -256,6 +261,22 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <span>Gợi ý</span>
           </button>
 
+          {/* Rote-Learning Keyword Hook Toggle ("Keyword học vẹt") */}
+          <button
+            type="button"
+            onClick={() => setShowMemoryKeyword((prev) => !prev)}
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              showMemoryKeyword
+                ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/60 dark:text-violet-200 border border-violet-300 dark:border-violet-700'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+            }`}
+            title="Hiện nhanh Keyword học vẹt (mẹo nhớ nhanh gắn liền đáp án đúng)"
+            aria-expanded={showMemoryKeyword}
+          >
+            <Zap className="w-3.5 h-3.5 text-violet-500" />
+            <span>Học vẹt</span>
+          </button>
+
           {mode === 'exam' && onToggleExamFlag && (
             <button
               type="button"
@@ -364,6 +385,42 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </div>
             <p className="text-xs sm:text-sm leading-relaxed text-amber-900 dark:text-amber-200">
               <strong>Nguyên tắc gợi mở:</strong> {smartHint.guidingPrincipleVi}
+            </p>
+          </div>
+        )}
+
+        {/* Rote-Learning Keyword Hook Drawer (Only mounted when user clicks "Học vẹt" before reveal) */}
+        {showMemoryKeyword && !effectiveRevealed && (
+          <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-violet-50 via-fuchsia-50/70 to-amber-50/60 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/30 border border-violet-300 dark:border-violet-800 text-xs sm:text-sm space-y-2 shadow-2xs">
+            <div className="font-bold text-violet-900 dark:text-violet-200 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+                <span>Keyword học vẹt (Mẹo nhớ nhanh)</span>
+              </span>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-violet-200/70 dark:bg-violet-900/70 text-violet-800 dark:text-violet-200">
+                Nhớ 2 giây
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/70 border border-violet-200/80 dark:border-violet-800/60">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  📌 Thấy đề có
+                </div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                  {memoryHook.cueVi}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-800/70">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                  🎯 Chốt từ khóa đáp án
+                </div>
+                <div className="font-bold text-emerald-950 dark:text-emerald-100 mt-0.5">
+                  {memoryHook.answerKeyword}
+                </div>
+              </div>
+            </div>
+            <p className="text-violet-950 dark:text-violet-100 font-medium leading-relaxed pt-0.5">
+              ⚡ <strong>Câu học vẹt:</strong> {memoryHook.roteFormula}
             </p>
           </div>
         )}
@@ -807,6 +864,40 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 ))}
               </div>
             )}
+
+            {/* Always-Visible Rote-Learning Keyword Card ("Keyword học vẹt") after reveal */}
+            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-violet-50 via-fuchsia-50/60 to-amber-50/50 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/30 border border-violet-300 dark:border-violet-800 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  <span>Keyword học vẹt (Mẹo nhớ nhanh đi thi)</span>
+                </h3>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-violet-200/70 dark:bg-violet-900/70 text-violet-800 dark:text-violet-200">
+                  Nhớ nhanh 2 giây
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm">
+                <div className="p-3 rounded-lg bg-white/85 dark:bg-slate-900/75 border border-violet-200/80 dark:border-violet-800/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    📌 Thấy đề nhắc tới
+                  </div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                    {memoryHook.cueVi}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-800/70">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                    🎯 Quét từ khóa đáp án
+                  </div>
+                  <div className="font-bold text-emerald-950 dark:text-emerald-100 mt-0.5">
+                    {memoryHook.answerKeyword}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm text-violet-950 dark:text-violet-100 font-medium leading-relaxed">
+                ⚡ <strong>Câu học vẹt:</strong> {memoryHook.roteFormula}
+              </p>
+            </div>
 
             {/* Main Explanation (100% Vietnamese) */}
             <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">

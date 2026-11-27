@@ -13,6 +13,11 @@
       "b": "Sai vì gỡ bỏ chính sách nội dung đồng nghĩa từ bỏ hoàn toàn kiểm soát an toàn, vi phạm trực tiếp yêu cầu tuyệt đối không tạo nội dung cấm.",
       "c": "Đúng vì bộ lọc đầu ra tất định (deterministic output filtering) kiểm tra mọi phản hồi trước khi giao tới người dùng, đảm bảo chặn nội dung vi phạm nhất quán và đáng tin cậy.",
       "d": "Sai vì nhờ người dùng báo cáo chỉ là xử lý thụ động sau khi nội dung vi phạm đã lọt ra tới người dùng cuối."
+    },
+    "memoryKeyword": {
+      "cueVi": "Content policy cấm tuyệt đối (must never produce)",
+      "answerKeyword": "Deterministic output filtering (Bộ lọc đầu ra tất định)",
+      "roteFormula": "Cấm tuyệt đối → Bắt buộc dùng bộ lọc đầu ra tất định, không chỉ nhờ system prompt."
     }
   },
   "ccdv-f-q002": {
@@ -29,6 +34,11 @@
       "b": "Đúng vì khóa riêng cho từng môi trường giúp cô lập phạm vi ảnh hưởng khi bị lộ, dễ dàng thu hồi, kiểm toán và xoay vòng độc lập giữa dev, staging và production.",
       "c": "Sai vì xoay vòng ngẫu nhiên cùng một khóa dùng chung không tạo ra sự cô lập giữa các môi trường; tại bất kỳ thời điểm nào khóa bị lộ vẫn truy cập được tất cả môi trường.",
       "d": "Sai vì chấp nhận lan truyền sự cố lộ khóa từ dev/staging sang production chỉ để đơn giản hóa là rủi ro bảo mật nghiêm trọng không thể chấp nhận."
+    },
+    "memoryKeyword": {
+      "cueVi": "API keys cho dev / staging / production",
+      "answerKeyword": "Distinct keys for each environment (Khóa riêng từng môi trường)",
+      "roteFormula": "Dev – Staging – Prod → Mỗi môi trường 1 API key riêng để cô lập lộ lọt."
     }
   },
   "ccdv-f-q003": {
@@ -45,6 +55,11 @@
       "b": "Sai vì chỉ dựa vào tiền lệ codebase cũ mà bỏ qua đánh giá kỹ thuật cụ thể giữa mở rộng built-in tool và viết custom tool.",
       "c": "Sai vì chỉ nhìn một chiều vào phương án custom tool mà bỏ qua khả năng mở rộng built-in tool hiện có.",
       "d": "Đúng vì so sánh cân bằng cả hai hướng — mở rộng built-in tool so với xây dựng custom tool — dựa trên yêu cầu kỹ thuật và chi phí bảo trì dài hạn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Built-in tool thiếu 1 tính năng vs Custom tool",
+      "answerKeyword": "Evaluate extending built-in vs custom tool (Đánh giá mở rộng hay viết mới)",
+      "roteFormula": "Thiếu 1 tính năng → Cân nhắc mở rộng built-in trước, thật sự cần mới viết custom tool."
     }
   },
   "ccdv-f-q004": {
@@ -61,6 +76,11 @@
       "b": "Đúng vì mô tả chính xác bản chất của cả hai: Skill là gói chỉ dẫn/tài nguyên quy trình, còn MCP server là giao diện chuẩn client-server cung cấp tools, resources và prompts.",
       "c": "Sai vì Skill và MCP server phục vụ hai vai trò khác nhau và không thể dùng thay thế lẫn nhau một cách tùy tiện.",
       "d": "Sai vì Skill không phải phiên bản cũ bị thay thế bởi MCP server; hai cơ chế này bổ trợ cho nhau trong cùng một hệ sinh thái."
+    },
+    "memoryKeyword": {
+      "cueVi": "So sánh Skill vs MCP server",
+      "answerKeyword": "Skill = bundles prompts/scripts/data • MCP = standard client interface",
+      "roteFormula": "Skill = gói prompt/script nạp nguyên khối • MCP = giao diện chuẩn client-server (tools/resources)."
     }
   },
   "ccdv-f-q005": {
@@ -77,6 +97,11 @@
       "b": "Sai vì trả về lúc JSON lúc văn bản tự do sẽ khiến hệ thống phía sau liên tục từ chối dữ liệu không hợp lệ.",
       "c": "Đúng vì quy định rõ JSON schema và ràng buộc chỉ xuất dữ liệu khớp schema giúp tối đa hóa khả năng tuân thủ định dạng của mô hình.",
       "d": "Sai vì để mô hình tự chọn định dạng sẽ tạo ra đầu ra không nhất quán, làm hỏng quá trình parse ở hệ thống phía sau."
+    },
+    "memoryKeyword": {
+      "cueVi": "System prompt bắt buộc xuất đúng JSON schema",
+      "answerKeyword": "Explicit constraints + produce only matching schema",
+      "roteFormula": "Ép JSON schema → Ghi rõ ràng buộc schema + yêu cầu CHỈ xuất đúng JSON khớp schema."
     }
   },
   "ccdv-f-q006": {
@@ -93,6 +118,11 @@
       "b": "Sai vì huấn luyện mô hình riêng cho một ít ví dụ edge-case là cực kỳ tốn kém, thừa thãi và không phù hợp khi few-shot prompting giải quyết trực tiếp.",
       "c": "Đúng vì đưa các ví dụ edge-case có nhãn vào prompt dạng few-shot là phương pháp chuẩn, nhanh và hiệu quả nhất giúp Claude học đúng mẫu phản hồi.",
       "d": "Sai vì cấm người dùng nhập trường hợp biên chỉ né tránh bài toán thay vì cải thiện chất lượng ứng dụng."
+    },
+    "memoryKeyword": {
+      "cueVi": "Kém ở edge cases + có sẵn ví dụ đã gán nhãn",
+      "answerKeyword": "Few-shot examples (Đưa ví dụ vào prompt)",
+      "roteFormula": "Có ví dụ edge-case gán nhãn → Nhét vào prompt làm few-shot examples."
     }
   },
   "ccdv-f-q007": {
@@ -109,6 +139,11 @@
       "b": "Sai vì tắt validation sẽ để dữ liệu sai cấu trúc lọt thẳng xuống hệ thống phía sau gây lỗi nghiêm trọng hơn.",
       "c": "Đúng vì xử lý lỗi validation theo quy trình phục hồi có giới hạn (retry, repair hoặc fallback) giúp tăng độ tin cậy mà vẫn bảo vệ hệ thống phía sau.",
       "d": "Sai vì đẩy dữ liệu sai định dạng xuống hệ thống phía sau sẽ khiến các dịch vụ đó bị lỗi hoặc sập."
+    },
+    "memoryKeyword": {
+      "cueVi": "Validation lỗi làm sập luôn cả request (terminal error)",
+      "answerKeyword": "Recognized error path → retry, repair, or fallback",
+      "roteFormula": "Lỗi validate đừng cho sập ngay → Nhánh lỗi đã biết: retry / repair / fallback."
     }
   },
   "ccdv-f-q008": {
@@ -125,6 +160,11 @@
       "b": "Đúng vì mô hình đồ thị hỗ trợ rẽ nhánh có điều kiện, cho phép vòng lặp quay lui giữa bước trích xuất sự kiện và đánh giá điều kiện, đồng thời có tiêu chí thành công riêng cho từng nút.",
       "c": "Sai vì chuỗi tuyến tính không có đường quay lui (return path), không đáp ứng được yêu cầu lặp lại giữa hai bước đầu.",
       "d": "Sai vì streaming là cơ chế truyền dữ liệu đầu ra theo luồng, không phải mẫu điều phối quy trình nhiều bước có lặp và rẽ nhánh."
+    },
+    "memoryKeyword": {
+      "cueVi": "Claim workflow 3 bước có lặp qua lại giữa các bước",
+      "answerKeyword": "Graph-based pattern (Đồ thị trạng thái)",
+      "roteFormula": "Quy trình cần đi qua đi lại / lặp theo trạng thái → Chọn Graph-based pattern."
     }
   },
   "ccdv-f-q009": {
@@ -141,6 +181,11 @@
       "b": "Sai vì trì hoãn sát ngày gỡ bỏ và đổi tất cả cùng lúc tạo áp lực rủi ro cao, không kịp xử lý nếu có sự cố tương thích.",
       "c": "Đúng vì có bộ regression tests làm chuẩn so sánh và chuyển đổi từng đợt có kiểm chứng là quy trình migration an toàn nhất trước hạn gỡ bỏ.",
       "d": "Sai vì bọc thêm wrapper mà vẫn gọi tham số deprecated sẽ vẫn bị hỏng khi API chính thức xóa bỏ tham số đó sau 6 tháng."
+    },
+    "memoryKeyword": {
+      "cueVi": "API deprecate tham số ở 40 chỗ (hạn 6 tháng)",
+      "answerKeyword": "Regression tests + migrate in batches",
+      "roteFormula": "Deprecate 40 chỗ → Viết regression test trước rồi chuyển dần từng đợt (batches)."
     }
   },
   "ccdv-f-q010": {
@@ -157,6 +202,11 @@
       "b": "Đúng vì defensive parsing bắt và xử lý an toàn mọi trường hợp thiếu trường, sai kiểu hoặc JSON lỗi ngay tại ranh giới tiếp nhận dữ liệu.",
       "c": "Sai vì để crash và khôi phục thủ công trái ngược hoàn toàn với mục tiêu xử lý lỗi mượt mà (graceful handling).",
       "d": "Sai vì âm thầm nuốt lỗi/bỏ dữ liệu sẽ gây mất dữ liệu ngầm và cực kỳ khó phát hiện, gỡ lỗi trong vận hành."
+    },
+    "memoryKeyword": {
+      "cueVi": "JSON sai định dạng / thừa thiếu trường làm crash downstream",
+      "answerKeyword": "Defensive parsing (Phân tích cú pháp phòng thủ)",
+      "roteFormula": "Sợ dữ liệu lỗi làm sập code sau → Dùng Defensive parsing xử lý thiếu/sai kiểu."
     }
   },
   "ccdv-f-q011": {
@@ -173,6 +223,11 @@
       "b": "Đúng vì Claude trực tiếp sử dụng tool description để hiểu mục đích, ranh giới sử dụng và phân biệt chính xác giữa các công cụ tương tự.",
       "c": "Sai vì chuyển mô tả sang file tài liệu bên ngoài khiến mô hình không hề nhìn thấy mô tả đó trong ngữ cảnh gọi API.",
       "d": "Sai vì các ví dụ lời gọi chỉ có tác dụng bổ trợ chứ không thay thế được phần mô tả nguyên tắc và điều kiện khi nào nên/không nên gọi công cụ."
+    },
+    "memoryKeyword": {
+      "cueVi": "Định nghĩa tool có tên rõ rồi, có nên xóa description?",
+      "answerKeyword": "Model uses description to decide when to call & disambiguate",
+      "roteFormula": "KHÔNG xóa mô tả tool → Model đọc description để biết KHI NÀO gọi và phân biệt ngữ cảnh."
     }
   },
   "ccdv-f-q012": {
@@ -189,6 +244,11 @@
       "b": "Sai vì mô tả mơ hồ và phó mặc cho hệ thống phía sau tự parse sẽ gây lỗi liên tục khi mô hình sinh sai cấu trúc.",
       "c": "Sai vì đẩy trách nhiệm kiểm tra hợp lệ xuống hệ thống phía sau khiến dữ liệu lỗi vẫn bị truyền qua và bị hệ thống đó từ chối.",
       "d": "Đúng vì kết hợp đủ ba lớp: định nghĩa schema tường minh, chỉ dẫn trong prompt và validate đầu ra trước khi gửi xuống downstream."
+    },
+    "memoryKeyword": {
+      "cueVi": "Thiết kế ứng dụng cần structured JSON cho downstream",
+      "answerKeyword": "Define schema + prompt for schema + validate before downstream",
+      "roteFormula": "Combo 3 bước JSON chuẩn: Định nghĩa schema → Prompt đúng schema → Validate trước khi chuyển đi."
     }
   },
   "ccdv-f-q013": {
@@ -205,6 +265,11 @@
       "b": "Sai vì thiên lệch kiểm tra riêng phương án toàn văn bản mà chưa xác định ưu tiên nghiệp vụ giữa hai thuộc tính.",
       "c": "Sai vì chỉ nhìn một chiều từ phương án chia nhỏ mà chưa chốt xem ứng dụng ưu tiên trích dẫn hay suy luận liên mục.",
       "d": "Đúng vì xuất phát từ tiêu chí chất lượng quan trọng nhất của bài toán thực tế để chọn chiến lược phù hợp, sau đó kiểm chứng thực nghiệm trên bộ hợp đồng mẫu."
+    },
+    "memoryKeyword": {
+      "cueVi": "Hợp đồng 50 trang: gửi nguyên hay chia đoạn (chunk)?",
+      "answerKeyword": "Identify which property matters more + validate on representative contracts",
+      "roteFormula": "Gửi nguyên hay chia đoạn → Chọn theo mục tiêu chất lượng ưu tiên + test trên hợp đồng mẫu."
     }
   },
   "ccdv-f-q014": {
@@ -221,6 +286,11 @@
       "b": "Sai vì giá input và output tokens khác nhau là chính sách giá chuẩn, không phải lỗi thanh toán.",
       "c": "Sai vì ngược với thực tế: tạo sinh từng output token tốn chi phí tính toán theo từng bước nên đơn giá cao hơn, không phải thấp hơn input token.",
       "d": "Sai vì cả input tokens lẫn output tokens đều được tính phí theo mức giá tương ứng."
+    },
+    "memoryKeyword": {
+      "cueVi": "Tại sao giá output tokens khác input tokens?",
+      "answerKeyword": "Output tokens billed higher + model both rates separately",
+      "roteFormula": "Output luôn đắt hơn Input → Tính chi phí phải tách riêng 2 đơn giá."
     }
   },
   "ccdv-f-q015": {
@@ -237,6 +307,11 @@
       "b": "Sai vì một prompt toàn cục không hề cô lập được dữ liệu hội thoại giữa các bước xử lý.",
       "c": "Sai vì nhúng toàn bộ lịch sử vào mọi bước đi ngược lại hoàn toàn yêu cầu không cho một số bước xem lịch sử trước đó.",
       "d": "Sai vì dồn tất cả nội dung và lịch sử vào mọi bước vừa vi phạm yêu cầu cô lập vừa gây phình ngữ cảnh và nhiễu suy luận."
+    },
+    "memoryKeyword": {
+      "cueVi": "Multi-step workflow: bước sau KHÔNG được thấy lịch sử trước",
+      "answerKeyword": "Context isolation via subagents / scoped steps",
+      "roteFormula": "Không muốn lộ lịch sử giữa các bước → Context isolation (Cô lập ngữ cảnh qua subagent)."
     }
   },
   "ccdv-f-q016": {
@@ -253,6 +328,11 @@
       "b": "Sai vì DoS tầng mạng và tấn công vật lý là mối đe dọa hạ tầng truyền thống, không phải nhóm rủi ro đặc thù của AI/LLM.",
       "c": "Sai vì XSS và SQL injection thuộc nhóm lỗ hổng ứng dụng web truyền thống mà đồng nghiệp đã liệt kê sẵn.",
       "d": "Đúng vì liệt kê đầy đủ các nhóm mối đe dọa đặc thù của ứng dụng LLM/Claude: prompt injection, rò rỉ dữ liệu qua ngữ cảnh, jailbreak và đầu ra không an toàn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Threat model: các mối đe dọa đặc thù riêng của AI",
+      "answerKeyword": "Prompt injection, data leakage, jailbreak, unsafe output",
+      "roteFormula": "Bộ tứ mối đe dọa AI: Prompt injection + Rò rỉ ngữ cảnh + Jailbreak + Đầu ra không an toàn."
     }
   },
   "ccdv-f-q017": {
@@ -269,6 +349,11 @@
       "b": "Sai vì nới lỏng schema chỉ khiến dịch vụ phía sau tiếp nhận nhiều tham số sai hơn và tiếp tục lỗi hoặc gây hành vi ngoài ý muốn.",
       "c": "Sai vì chỉ dẫn trong prompt chỉ giúp cải thiện xác suất chứ không thể thay thế bước kiểm tra hợp lệ tất định trước khi thực thi.",
       "d": "Đúng vì giữ schema chặt, validate trước khi gọi dịch vụ và trả về lỗi có cấu trúc cho phép agent tự sửa lỗi an toàn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Agent gọi tool truyền sai/dư tham số ngoài schema",
+      "answerKeyword": "Keep schema strict + validate + return structured error to retry",
+      "roteFormula": "KHÔNG nới lỏng schema → Giữ strict, validate rồi trả lỗi có cấu trúc để agent tự sửa."
     }
   },
   "ccdv-f-q018": {
@@ -285,6 +370,11 @@
       "b": "Đúng vì khoanh vùng hook đúng vào các thao tác rủi ro cao giúp duy trì rào chắn bảo mật tất định trong khi loại bỏ độ trễ thừa ở thao tác an toàn.",
       "c": "Sai vì tắt toàn bộ hook tạo ra lỗ hổng bảo mật lớn ngay trong thời gian đang chỉnh sửa.",
       "d": "Sai vì tắt agent giờ cao điểm làm gián đoạn dịch vụ thay vì tối ưu phạm vi kích hoạt hook."
+    },
+    "memoryKeyword": {
+      "cueVi": "Hook chạy trên mọi hành động gây chậm nặng",
+      "answerKeyword": "Scope hooks to high-risk actions only",
+      "roteFormula": "Hook chậm → Chỉ gắn cho hành động rủi ro cao (xóa/nhạy cảm), gỡ khỏi thao tác nhẹ."
     }
   },
   "ccdv-f-q019": {
@@ -301,6 +391,11 @@
       "b": "Đúng vì mô hình orchestrator–subagent đáp ứng chính xác cơ chế chia nhỏ bài toán, ủy quyền chuyên trách và tổng hợp kết quả.",
       "c": "Sai vì memory pattern phục vụ lưu trữ tri thức/lịch sử dài hạn, không phải kiến trúc điều phối phân công tác vụ con.",
       "d": "Sai vì cắt tỉa ngữ cảnh là kỹ thuật tiết kiệm token, không giải quyết việc phân công song song và tổng hợp từ subagents."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chia bài toán nghiên cứu → giao subagent chuyên biệt → gộp kết quả",
+      "answerKeyword": "Orchestrator and subagent pattern",
+      "roteFormula": "Chia việc – giao chuyên gia – tổng hợp → Mẫu Orchestrator & Subagent."
     }
   },
   "ccdv-f-q020": {
@@ -317,6 +412,11 @@
       "b": "Sai vì thêm lớp cơ sở dữ liệu lịch sử tách biệt không cần thiết cho vòng lặp chuẩn mà SDK đã hỗ trợ sẵn.",
       "c": "Đúng vì tận dụng trọn vẹn giao diện công cụ, cơ chế điều phối vòng lặp và quản lý lịch sử tích hợp sẵn trong Claude Agent SDK.",
       "d": "Sai vì tự viết lại vòng lặp và quản lý lịch sử đi ngược lại lý do chọn SDK ngay từ đầu, làm tăng chi phí bảo trì không cần thiết."
+    },
+    "memoryKeyword": {
+      "cueVi": "Dùng Claude Agent SDK gọi nhiều API/DB có lặp lại",
+      "answerKeyword": "Use SDK tool interface; let SDK handle loop, dispatch, history",
+      "roteFormula": "Đã dùng Agent SDK → Dùng tool interface của SDK, để SDK tự lo vòng lặp, dispatch và lịch sử."
     }
   },
   "ccdv-f-q021": {
@@ -333,6 +433,11 @@
       "b": "Đúng vì đánh giá từng hạng mục theo nhu cầu gốc và tính năng SDK hiện tại giúp tối ưu khả năng bảo trì mà không phá vỡ độ tin cậy.",
       "c": "Sai vì giữ hết mọi mã cũ mà không rà soát khiến nợ kỹ thuật phình to dù SDK mới có thể đã tích hợp sẵn.",
       "d": "Sai vì bỏ SDK để tự viết lại toàn bộ vòng lặp làm tăng mạnh công sức phát triển và rủi ro bảo trì."
+    },
+    "memoryKeyword": {
+      "cueVi": "Agent có nhiều code tùy chỉnh ghi đè SDK, có nên xóa hết?",
+      "answerKeyword": "Decide on each customization individually",
+      "roteFormula": "Đừng xóa sạch cũng đừng giữ mù quáng → Đánh giá TỪNG tùy chỉnh theo lý do gốc & SDK hiện tại."
     }
   },
   "ccdv-f-q022": {
@@ -349,6 +454,11 @@
       "b": "Đúng vì chiến lược kiểm thử phân tầng (unit + integration + E2E) mang lại độ bao phủ toàn diện, nhanh và bền vững cho ứng dụng AI production.",
       "c": "Sai vì duy trì test rời rạc (ad-hoc) không tạo nên một hệ thống kiểm thử chuẩn hóa và dễ bỏ sót lỗi hồi quy.",
       "d": "Sai vì chỉ dùng E2E test sẽ chạy rất chậm, tốn chi phí API, dễ chập chờn và khó khoanh vùng nguyên nhân lỗi."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chạy production 1 năm, chuẩn hóa chiến lược testing",
+      "answerKeyword": "Unit tests + Integration tests + End-to-end tests",
+      "roteFormula": "Tháp test chuẩn 3 tầng: Unit (hàm) + Integration (tích hợp Claude) + E2E (luồng chính)."
     }
   },
   "ccdv-f-q023": {
@@ -365,6 +475,11 @@
       "b": "Sai vì đẩy mã tích hợp API bên ngoài thiếu xử lý lỗi lên production dễ gây sập dịch vụ khi API quá tải hoặc timeout.",
       "c": "Sai vì duyệt code chưa đạt chuẩn để tự vá sau tạo tiền lệ xấu và dễ phát sinh sự cố ngay trong khoảng trống giữa các commit.",
       "d": "Sai vì code chỉ chạy happy path thiếu error handling và test không đủ an toàn để merge vào dịch vụ production."
+    },
+    "memoryKeyword": {
+      "cueVi": "Review PR: hardcode prompt/model, thiếu xử lý lỗi, không có test",
+      "answerKeyword": "Configurable prompt/model + API error handling + integration tests",
+      "roteFormula": "PR chạy được nhưng ẩu → Yêu cầu sửa đủ 3 thứ: Tách config + Xử lý lỗi API + Thêm test."
     }
   },
   "ccdv-f-q024": {
@@ -381,6 +496,11 @@
       "b": "Sai vì chẩn đoán nhầm bản chất sinh ngôn ngữ của LLM thành lỗi xây dựng request, gây tốn công điều tra sai hướng.",
       "c": "Sai vì ngay cả trên cùng một phiên bản model duy nhất, quá trình sinh token vẫn có sự biến thiên tự nhiên.",
       "d": "Sai vì giả định vô căn cứ rằng ứng dụng đang gửi hai prompt khác nhau trong khi hiện tượng này xảy ra hoàn toàn tự nhiên với cùng một prompt."
+    },
+    "memoryKeyword": {
+      "cueVi": "Claude lúc lặp nguyên văn prompt, lúc diễn đạt lại → có phải bug?",
+      "answerKeyword": "LLMs generate token by token (property of generation, not a bug)",
+      "roteFormula": "Lúc lặp lúc paraphrase không phải bug → Do bản chất LLM sinh từng token theo xác suất."
     }
   },
   "ccdv-f-q025": {
@@ -397,6 +517,11 @@
       "b": "Đúng vì tích hợp thẳng bằng Claude SDK đáp ứng đầy đủ nhu cầu thực tế, tận dụng trọn tính năng native của Claude và giữ mã nguồn gọn nhẹ.",
       "c": "Sai vì tự viết lớp trừu tượng nội bộ còn tốn công phát triển và bảo trì nhiều hơn mà vẫn không có nhu cầu sử dụng.",
       "d": "Sai vì duy trì song song hai đường tích hợp gây lãng phí gấp đôi công sức bảo trì mà không giải quyết bài toán thực tế nào."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chỉ dùng Claude, nên gọi SDK trực tiếp hay qua lớp trừu tượng đa LLM?",
+      "answerKeyword": "Direct integration via Claude SDK (no multi-provider need)",
+      "roteFormula": "Chỉ dùng 1 nhà cung cấp Claude → Gọi thẳng SDK chính thức, tránh lớp trừu tượng thừa."
     }
   },
   "ccdv-f-q026": {
@@ -413,6 +538,11 @@
       "b": "Đúng vì khớp chính xác cả hai đặc điểm trong sơ đồ: một agent quản lý điều phối ở trên và các subagent chuyên biệt có ngữ cảnh/công cụ cô lập ở dưới.",
       "c": "Sai vì hệ thống đang điều phối các subagent thực thi chuyên biệt chứ không phải chỉ tìm kiếm văn bản trong kho chỉ mục (RAG).",
       "d": "Sai vì pipeline truyền toàn bộ lịch sử tuần tự qua từng mắt xích, khác với mô hình điều phối trung tâm và cô lập ngữ cảnh của sơ đồ."
+    },
+    "memoryKeyword": {
+      "cueVi": "Travel booking: 1 tầng trên điều phối 3 nhánh (flight/hotel/transport)",
+      "answerKeyword": "Manager/supervisor pattern with isolated context per subagent",
+      "roteFormula": "1 cấp trên + 3 chuyên biệt giữ lịch sử/tool riêng → Manager/Supervisor + cô lập ngữ cảnh."
     }
   },
   "ccdv-f-q027": {
@@ -429,6 +559,11 @@
       "b": "Đúng vì bao phủ toàn diện cả ba câu hỏi của nhóm sản phẩm: quy tắc hết hạn phiên, điều kiện reset trạng thái và cơ chế khởi tạo phiên sạch.",
       "c": "Sai vì một timeout ngắn cứng nhắc có thể cắt ngang phiên làm việc hợp lệ của người dùng mà vẫn thiếu các trigger reset theo nghiệp vụ.",
       "d": "Sai vì reset toàn cục trên tất cả phiên cùng lúc sẽ làm gián đoạn hàng loạt người dùng khác đang tương tác bình thường."
+    },
+    "memoryKeyword": {
+      "cueVi": "Quản lý session lifecycle nhiều lượt tránh ngữ cảnh cũ (stale)",
+      "answerKeyword": "Explicit expiration rules + state reset triggers + fresh sessions",
+      "roteFormula": "Chống ngữ cảnh cũ rò rỉ → Quy định rõ: lúc hết hạn + điều kiện reset + tạo phiên mới."
     }
   },
   "ccdv-f-q028": {
@@ -445,6 +580,11 @@
       "b": "Đúng vì vừa tuân thủ ngay ràng buộc hợp đồng AWS Bedrock, vừa giữ kiến trúc logic ứng dụng độc lập với nhà cung cấp để dễ bảo trì.",
       "c": "Sai vì cố tình bỏ qua điều khoản hợp đồng doanh nghiệp là vi phạm tuân thủ nghiêm trọng.",
       "d": "Sai vì triển khai bằng API trực tiếp trước rồi mới di chuyển vừa vi phạm yêu cầu ngay từ đầu vừa tạo thêm chi phí migrate không cần thiết."
+    },
+    "memoryKeyword": {
+      "cueVi": "Hợp đồng AWS bắt buộc gọi Claude qua Amazon Bedrock",
+      "answerKeyword": "Bedrock-compatible API path + provider-agnostic business logic",
+      "roteFormula": "Bắt dùng Bedrock → Đổi đường dẫn API sang Bedrock nhưng giữ logic nghiệp vụ tách biệt."
     }
   },
   "ccdv-f-q029": {
@@ -461,6 +601,11 @@
       "b": "Sai vì tách rời hoàn toàn khỏi nhóm phát triển làm chậm việc sửa lỗi prompt, model và cải tiến ứng dụng.",
       "c": "Sai vì triển khai lên production là điểm khởi đầu của giai đoạn phục vụ người dùng chứ không phải lúc ngừng hệ thống.",
       "d": "Sai vì chặn toàn bộ công việc vận hành/giám sát để chờ một cuộc họp đánh giá hình thức là không phù hợp cho hệ thống đang chạy production."
+    },
+    "memoryKeyword": {
+      "cueVi": "Vừa deploy xong lên production, giai đoạn tiếp theo là gì?",
+      "answerKeyword": "Operating and maintaining (monitoring, issues, evolution)",
+      "roteFormula": "Deploy xong chưa phải hết → Vào pha Vận hành & Bảo trì (giám sát, xử lý sự cố, nâng cấp)."
     }
   },
   "ccdv-f-q030": {
@@ -477,6 +622,11 @@
       "b": "Sai vì quản lý cấu hình thủ công qua bảng tính dễ lỗi thời và không được Claude Code tự động nạp.",
       "c": "Đúng vì `.claude/settings.json` cấp dự án được version-control ngay trong repo, tự động áp dụng quyền, model mặc định và cấu hình đồng bộ cho cả nhóm.",
       "d": "Sai vì dán system prompt thủ công đầu mỗi phiên không kiểm soát được quyền (permissions) hay model mặc định và rất dễ quên."
+    },
+    "memoryKeyword": {
+      "cueVi": "Cấu hình quyền & model mặc định dùng chung cả repo trong Claude Code",
+      "answerKeyword": "Project-level settings.json (.claude/settings.json)",
+      "roteFormula": "Cấu hình chung cả team theo repo → Đặt trong `settings.json` cấp dự án."
     }
   },
   "ccdv-f-q031": {
@@ -493,6 +643,11 @@
       "b": "Sai vì giao tiếp qua file trên ổ đĩa chậm, không mở rộng được qua mạng và không phù hợp cho cập nhật real-time.",
       "c": "Đúng vì WebSocket sinh ra để duy trì kết nối bền vững hai chiều với độ trễ thấp cho dữ liệu thời gian thực.",
       "d": "Sai vì HTTP polling liên tục gây tốn băng thông, tải máy chủ cao và độ trễ không thực sự real-time."
+    },
+    "memoryKeyword": {
+      "cueVi": "Kết nối liên tục (persistent) nhận cập nhật thời gian thực",
+      "answerKeyword": "WebSocket (bidirectional, persistent, real-time)",
+      "roteFormula": "Persistent + Real-time hai chiều → Chọn ngay WebSocket."
     }
   },
   "ccdv-f-q032": {
@@ -509,6 +664,11 @@
       "b": "Sai vì cấm người dùng gửi nhóm đầu vào đang tăng trưởng thay vì cải thiện prompt là bỏ lỡ nhu cầu thực tế.",
       "c": "Đúng vì quy trình chuẩn là cải tiến lặp có kiểm chứng bằng evals để vừa sửa được nhóm yếu vừa bảo vệ chất lượng nhóm phổ biến.",
       "d": "Sai vì tách thành một ứng dụng hoàn toàn riêng chỉ để né sửa prompt làm phình to hạ tầng và chi phí bảo trì."
+    },
+    "memoryKeyword": {
+      "cueVi": "Prompt cũ chạy kém trên một nhóm input mới tăng lưu lượng",
+      "answerKeyword": "Iterate on prompt + validate with evals",
+      "roteFormula": "Prompt yếu ở nhóm input mới → Cải tiến lặp (iterate) + kiểm chứng lại bằng evals."
     }
   },
   "ccdv-f-q033": {
@@ -525,6 +685,11 @@
       "b": "Sai vì prompt caching giúp giảm chi phí và thời gian xử lý phần tiền tố lặp lại, không dùng để hiển thị dần nội dung đang sinh.",
       "c": "Đúng vì streaming responses trả về các token tăng dần qua SSE ngay trong lúc mô hình sinh văn bản.",
       "d": "Sai vì Batch API chạy bất đồng bộ trong khung 24 giờ, không dùng cho tương tác trực tiếp với người dùng."
+    },
+    "memoryKeyword": {
+      "cueVi": "Hiện câu trả lời cho user ngay trong lúc model đang sinh",
+      "answerKeyword": "Streaming responses (tokens incrementally)",
+      "roteFormula": "Hiện chữ dần ngay lập tức → Bật Streaming responses."
     }
   },
   "ccdv-f-q034": {
@@ -541,6 +706,11 @@
       "b": "Sai vì hệ thống rule-based cứng nhắc kém linh hoạt trong việc soạn phản hồi tự nhiên cho các yêu cầu khách hàng đa dạng.",
       "c": "Sai vì gọi nhiều lần song song cộng thêm bước chấm chọn làm tăng mạnh chi phí và độ trễ mà không tách bạch giai đoạn phân loại.",
       "d": "Sai vì gộp hai nhiệm vụ khác nhau vào một prompt duy nhất dễ làm giảm chất lượng cả phân loại lẫn soạn thảo, khó kiểm thử và khó định tuyến trung gian."
+    },
+    "memoryKeyword": {
+      "cueVi": "Ticket 2 bước: phân loại (triage) + soạn trả lời (response)",
+      "answerKeyword": "Separate Claude calls (focused prompts per stage)",
+      "roteFormula": "2 bước khác mục tiêu/đầu ra → Tách 2 lời gọi Claude riêng để mỗi prompt tập trung."
     }
   },
   "ccdv-f-q035": {
@@ -557,6 +727,11 @@
       "b": "Sai vì chọn model quá sớm khi chưa định nghĩa rõ yêu cầu chức năng, độ trễ, bảo mật và chất lượng.",
       "c": "Sai vì tham khảo tiền lệ bên ngoài không thể thay thế bước đầu tiên là phân tích chính xác yêu cầu chức năng và hạ tầng của bài toán nội tại.",
       "d": "Đúng vì chuyển đổi mục tiêu kinh doanh sang yêu cầu chức năng và hạ tầng rõ ràng là bước nền tảng đầu tiên trong quy trình kỹ thuật."
+    },
+    "memoryKeyword": {
+      "cueVi": "Product nói yêu cầu kinh doanh chung chung (\"tạo memo nhanh hơn\")",
+      "answerKeyword": "Interpret functional and infrastructure requirements first",
+      "roteFormula": "Yêu cầu business chung chung → Bước 1: dịch ra yêu cầu chức năng & hạ tầng cụ thể."
     }
   },
   "ccdv-f-q036": {
@@ -573,6 +748,11 @@
       "b": "Sai vì tự ý triển khai cục bộ mà không đánh giá tổng thể vẫn bỏ ngỏ tác động lên các hệ thống phụ thuộc còn lại.",
       "c": "Sai vì chỉ gửi thông báo mà không đánh giá tác động thực tế không giúp ngăn chặn sự cố hỏng tích hợp.",
       "d": "Đúng vì đánh giá ảnh hưởng lên từng hệ thống phụ thuộc và phối hợp với chủ sở hữu trước khi rollout giúp đảm bảo phát hành an toàn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Sắp đổi nhiều prompt dùng chung cho nhiều hệ thống downstream",
+      "answerKeyword": "Assess impact on each downstream + coordinate with owners",
+      "roteFormula": "Đổi config ảnh hưởng nhiều hệ thống sau → Đánh giá tác động từng bên + báo chủ hệ thống trước."
     }
   },
   "ccdv-f-q037": {
@@ -589,6 +769,11 @@
       "b": "Sai vì gộp request không giảm được giới hạn token/phút (ITPM/OTPM) và cũng không xử lý trường hợp vượt giới hạn.",
       "c": "Sai vì dùng streaming không hề miễn trừ hay làm giảm mức áp dụng rate limits của Claude API.",
       "d": "Đúng vì kết hợp đầy đủ: nắm rõ hạn mức rate limits, thiết kế lưu lượng giờ cao điểm nằm trong giới hạn và xử lý 429 bằng exponential backoff."
+    },
+    "memoryKeyword": {
+      "cueVi": "Lưu lượng cao giờ hành chính, lo chạm Rate Limit",
+      "answerKeyword": "Identify limits + design within limits + exponential backoff",
+      "roteFormula": "Sợ chạm Rate limit giờ cao điểm → Nắm ngưỡng + thiết kế trong ngưỡng + Exponential backoff."
     }
   },
   "ccdv-f-q038": {
@@ -605,6 +790,11 @@
       "b": "Sai vì gộp làm một sẽ bỏ qua các bài toán quản lý trạng thái, cô lập ngữ cảnh và cắt tỉa bộ nhớ đặc thù của context engineering.",
       "c": "Sai vì context engineering không xóa sổ hay thay thế prompt engineering; bạn vẫn cần prompt tốt bên trong một hệ thống quản lý ngữ cảnh tốt.",
       "d": "Đúng vì định nghĩa chính xác phạm vi của cả hai: prompt engineering ở mức từng lời gọi đơn lẻ và context engineering ở mức dòng chảy trạng thái qua nhiều lượt/bước."
+    },
+    "memoryKeyword": {
+      "cueVi": "Phân biệt Prompt engineering vs Context engineering",
+      "answerKeyword": "Prompt = từng prompt lẻ • Context = luồng thông tin qua nhiều lượt/bước",
+      "roteFormula": "Prompt = chỉnh 1 lệnh đơn • Context = quản lý dòng ngữ cảnh & trạng thái xuyên suốt phiên dài."
     }
   },
   "ccdv-f-q039": {
@@ -621,6 +811,11 @@
       "b": "Sai vì chỉnh sửa prompt mò mẫm trước khi điều tra nguyên nhân có thể gây lỗi mới hoặc phá vỡ cơ chế an toàn.",
       "c": "Sai vì thống kê phân bố tổng hợp chỉ cho thấy bề nổi, còn trace chi tiết từng request mới cho biết chính xác cái gì kích hoạt từ chối.",
       "d": "Đúng vì đọc trace đầy đủ của request bị từ chối là bước chẩn đoán gốc rễ chính xác nhất trước khi thay đổi bất kỳ thứ gì."
+    },
+    "memoryKeyword": {
+      "cueVi": "Ứng dụng thỉnh thoảng từ chối câu hỏi hợp lệ (refusal) → bước 1 làm gì?",
+      "answerKeyword": "Examine traces of refused requests",
+      "roteFormula": "Bị từ chối vô lý → Bước 1 luôn là soi Traces để tìm đúng nguyên nhân kích hoạt."
     }
   },
   "ccdv-f-q040": {
@@ -637,6 +832,11 @@
       "b": "Đúng vì giải quyết trực tiếp nguyên nhân bằng cách tinh chỉnh prompt cho hợp model mới, đo đạc lại rồi mới quyết định nâng cấp an toàn.",
       "c": "Sai vì cố thủ mãi ở model cũ khiến ứng dụng mất cơ hội hưởng cải tiến chất lượng và gặp rủi ro khi model cũ bị ngừng hỗ trợ (deprecated).",
       "d": "Sai vì đánh đổi 3% lỗi hỏng định dạng trên production là không thể chấp nhận chỉ vì suy luận tăng 8%."
+    },
+    "memoryKeyword": {
+      "cueVi": "Model mới suy luận tốt hơn nhưng bị lỗi định dạng với prompt cũ nhiều mục",
+      "answerKeyword": "Adapt system prompt + re-evaluate before upgrading",
+      "roteFormula": "Model mới lỗi format → Chỉnh prompt hợp model mới rồi eval lại, hết lỗi mới nâng cấp."
     }
   },
   "ccdv-f-q041": {
@@ -653,6 +853,11 @@
       "b": "Đúng vì lưu chung trong repo dự án và review qua pull request đảm bảo nguồn chân lý duy nhất, dễ theo dõi lịch sử và đồng bộ giữa các thành viên.",
       "c": "Sai vì nhân bản cấu hình ra nhiều repo gây lệch phiên bản và vi phạm nguyên tắc single source of truth.",
       "d": "Sai vì tách cấu hình dự án ra khỏi repo mã nguồn khiến Claude Code không tự nạp đúng ngữ cảnh theo từng nhánh/commit của dự án."
+    },
+    "memoryKeyword": {
+      "cueVi": "Quản lý cấu hình CLAUDE.md và settings.json cho dễ theo dõi & review",
+      "answerKeyword": "Version-control alongside source code + PR review",
+      "roteFormula": "`CLAUDE.md` & `settings.json` → Lưu Git chung với code và review qua Pull Request như code."
     }
   },
   "ccdv-f-q042": {
@@ -669,6 +874,11 @@
       "b": "Sai vì bỏ phí bộ ví dụ chuẩn và chỉ dùng zero-shot sẽ làm giảm độ nhất quán về định dạng so với multi-shot.",
       "c": "Sai vì huấn luyện mô hình riêng cho một tập nhỏ ví dụ định dạng là quá tốn kém và không cần thiết.",
       "d": "Đúng vì multi-shot prompting đưa ngay các ví dụ gán nhãn chuẩn vào prompt giúp Claude khớp chính xác định dạng mục tiêu."
+    },
+    "memoryKeyword": {
+      "cueVi": "Có tập nhỏ ví dụ mẫu đúng format để định hướng Claude ngay từ đầu",
+      "answerKeyword": "Multi-shot prompting (Đưa ví dụ mẫu vào prompt)",
+      "roteFormula": "Có sẵn ví dụ chuẩn format → Dùng Multi-shot prompting kèm ví dụ vào prompt."
     }
   },
   "ccdv-f-q043": {
@@ -685,6 +895,11 @@
       "b": "Đúng vì chẩn đoán chính xác lỗi format drift do ngữ cảnh tích tụ qua nhiều lượt và khắc phục đúng gốc bằng context management kết hợp output validation.",
       "c": "Sai vì model nhỏ hơn thường yếu hơn trong việc giữ cấu trúc nghiêm ngặt trên ngữ cảnh dài, không giải quyết nguyên nhân gốc.",
       "d": "Sai vì khởi động lại cả ứng dụng sau mỗi lượt làm mất toàn bộ trạng thái phiên và gián đoạn dịch vụ."
+    },
+    "memoryKeyword": {
+      "cueVi": "JSON chuẩn vài lượt đầu nhưng lệch dần sau nhiều lượt (drift)",
+      "answerKeyword": "Format drift → context management or output validation",
+      "roteFormula": "Càng chat dài càng lệch JSON → Lỗi Format drift → Quản lý ngữ cảnh + validate đầu ra."
     }
   },
   "ccdv-f-q044": {
@@ -701,6 +916,11 @@
       "b": "Sai vì bỏ `CLAUDE.md` và tự cấu hình tay gây không đồng nhất giữa các lập trình viên và tốn công sức.",
       "c": "Sai vì trang tài liệu bên ngoài không được Claude Code tự động nạp vào ngữ cảnh khi làm việc.",
       "d": "Sai vì chỉ đặt đường dẫn chéo giữa các repo không phải cơ chế nạp tự động chuẩn của Claude Code và dễ bị gãy khi repo kia không nằm trên máy."
+    },
+    "memoryKeyword": {
+      "cueVi": "Quy tắc chung cho mọi repo + quy tắc riêng từng repo (tránh copy lặp)",
+      "answerKeyword": "CLAUDE.md hierarchy (Phân cấp CLAUDE.md)",
+      "roteFormula": "Chung cho mọi repo + riêng từng repo → Dùng phân cấp `CLAUDE.md` (hierarchy)."
     }
   },
   "ccdv-f-q045": {
@@ -717,6 +937,11 @@
       "b": "Sai vì để các subagent đọc chéo và tự hòa giải làm phá vỡ tính cô lập ngữ cảnh, tăng token tiêu thụ và khó kiểm soát vòng lặp vô hạn.",
       "c": "Sai vì thêm retry chỉ làm tăng thêm lời gọi trùng lặp/token, còn ghi log hậu kiểm không ngăn chặn được dữ liệu mâu thuẫn lọt ra production.",
       "d": "Sai vì gộp hết vào một lời gọi khổng lồ đánh mất lợi ích chuyên môn hóa và cô lập ngữ cảnh của kiến trúc multi-agent."
+    },
+    "memoryKeyword": {
+      "cueVi": "Multi-agent production: subagent gọi tool quá đà & trả dữ liệu sai chuẩn",
+      "answerKeyword": "Tool budgets + schema validation + explicit handoff contracts",
+      "roteFormula": "Siết kỷ luật subagent → Ngân sách tool + Validate schema + Hợp đồng bàn giao (handoff)."
     }
   },
   "ccdv-f-q046": {
@@ -733,6 +958,11 @@
       "b": "Sai vì vội đổi temperature khi chưa thu thập trace có thể bỏ sót nguyên nhân thực sự (như ngữ cảnh đầu vào khác nhau hoặc lỗi truyền tham số).",
       "c": "Đúng vì thu thập đầy đủ trace và đối chiếu giữa lần chạy chuẩn với lần chạy lệch là quy trình gỡ lỗi hệ thống bài bản nhất.",
       "d": "Sai vì vội đổ lỗi cho tính bất định của LLM mà không điều tra sẽ bỏ lỡ các lỗi thực sự trong prompt hoặc luồng tạo ngữ cảnh."
+    },
+    "memoryKeyword": {
+      "cueVi": "Cùng model & prompt nhưng đầu ra không nhất quán → gỡ lỗi thế nào?",
+      "answerKeyword": "Capture full traces & compare consistent vs inconsistent runs",
+      "roteFormula": "Đầu ra lúc đúng lúc sai → Ghi full trace (input, prompt, output, params) rồi so sánh đối chiếu."
     }
   },
   "ccdv-f-q047": {
@@ -749,6 +979,11 @@
       "b": "Sai vì chọn model theo giá/tốc độ trước mà để kiểm tra chất lượng sau có thể dẫn tới sản phẩm không đạt chuẩn chất lượng tối thiểu.",
       "c": "Sai vì tách chi phí ra xem sau cùng có thể dẫn tới chọn model quá đắt so với quy mô vận hành thực tế.",
       "d": "Sai vì ưu tiên đơn lẻ độ trễ trước rồi mới xét chất lượng và chi phí dễ gây lựa chọn lệch lạc."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chọn model theo 3 chiều: Quality – Latency – Cost",
+      "answerKeyword": "Fits quality, latency, and cost requirements together (tradeoffs)",
+      "roteFormula": "Tam giác Chất lượng – Độ trễ – Chi phí → Chọn model cân bằng ĐỒNG THỜI cả 3 mục tiêu."
     }
   },
   "ccdv-f-q048": {
@@ -765,6 +1000,11 @@
       "b": "Đúng vì headless mode (`-p`) kết hợp phân quyền cụ thể trong `settings.json` là cách chuẩn được tài liệu Claude Code khuyến nghị cho CI/CD.",
       "c": "Sai vì bỏ công cụ phù hợp chỉ để tránh cấu hình vài dòng quyền chuẩn là không cần thiết.",
       "d": "Sai vì yêu cầu người ngồi bấm duyệt tay phá vỡ hoàn toàn bản chất tự động của CI pipeline."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chạy Claude Code tự động trong CI pipeline không hỏi xác nhận",
+      "answerKeyword": "Headless mode (`-p`) + permissions in settings.json + capture output",
+      "roteFormula": "CI không người bấm → Chạy Headless mode + cấp quyền sẵn trong `settings.json` + bắt output."
     }
   },
   "ccdv-f-q049": {
@@ -781,6 +1021,11 @@
       "b": "Sai vì tiếp tục chồng tính năng mới lên nền code rối rắm chỉ khiến nợ kỹ thuật nhân đôi và tốc độ phát triển chậm hơn nữa.",
       "c": "Đúng vì dành một đợt refactor có kế hoạch để dọn trùng lặp, tách biệt trách nhiệm và làm rõ control flow giúp bảo trì bền vững.",
       "d": "Sai vì dọn dẹp manh mún không giải quyết được vấn đề kiến trúc và luồng điều khiển rối rắm ở tầm tổng thể."
+    },
+    "memoryKeyword": {
+      "cueVi": "Code xử lý prompt sau 6 tháng trùng lặp, rối rắm, khó thêm tính năng",
+      "answerKeyword": "Plan a refactoring pass before adding new features",
+      "roteFormula": "Code phình rối sau 6 tháng → Lên kế hoạch Refactor gom trùng lặp trước khi làm tính năng mới."
     }
   },
   "ccdv-f-q050": {
@@ -797,6 +1042,11 @@
       "b": "Sai vì ứng dụng pha trộn vẫn có system prompt, hướng dẫn và công cụ tĩnh lặp lại rất phù hợp cho prompt caching.",
       "c": "Sai vì phần đầu vào người dùng thay đổi liên tục giữa các request nên tỷ lệ khớp cache (cache hit) gần như bằng 0.",
       "d": "Đúng vì prompt caching được thiết kế tối ưu cho phần tiền tố tĩnh lặp lại nhiều lần như system prompt, hướng dẫn, tài liệu chung và tool definitions."
+    },
+    "memoryKeyword": {
+      "cueVi": "Dùng Prompt Caching thì nên cache phần nào?",
+      "answerKeyword": "Static portions repeated across requests (system prompt, shared context)",
+      "roteFormula": "Prompt Caching chỉ cache phần TĨNH lặp lại nhiều (system prompt, tools, ngữ cảnh chung)."
     }
   },
   "ccdv-f-q051": {
@@ -813,6 +1063,11 @@
       "b": "Sai vì giữ mọi kết quả cũ vô thời hạn sẽ nhanh chóng làm tràn context window, tăng chi phí và gây nhiễu suy luận.",
       "c": "Sai vì hạ cấp model gây giảm chất lượng mà vẫn không giải quyết vấn đề rác ngữ cảnh tích tụ.",
       "d": "Đúng vì tool output pruning loại bỏ đúng các kết quả công cụ đã lỗi thời, giữ cửa sổ ngữ cảnh gọn nhẹ và sắc bén."
+    },
+    "memoryKeyword": {
+      "cueVi": "Kết quả tool cũ tích tụ làm đầy context window trong workflow nhiều bước",
+      "answerKeyword": "Tool output pruning (Cắt tỉa đầu ra công cụ cũ)",
+      "roteFormula": "Output tool cũ làm đầy bộ nhớ → Dùng Tool output pruning xóa bớt kết quả không cần nữa."
     }
   },
   "ccdv-f-q052": {
@@ -829,6 +1084,11 @@
       "b": "Sai vì HTTP polling không phải giao thức chuẩn thay thế cho STDIO/Streamable HTTP của MCP và gây độ trễ cao.",
       "c": "Sai vì chạy song song cả hai giao thức cho một tiến trình cục bộ chỉ gây phức tạp thừa thãi.",
       "d": "Đúng vì STDIO là chuẩn vận chuyển MCP tối ưu cho tiến trình con chạy cục bộ ngay cùng phiên Claude Code."
+    },
+    "memoryKeyword": {
+      "cueVi": "MCP server khởi chạy cục bộ bởi Claude Code: STDIO hay HTTP?",
+      "answerKeyword": "STDIO (local process communication, no network setup)",
+      "roteFormula": "MCP chạy cục bộ trên máy cá nhân → Chọn STDIO (không cần mở cổng mạng HTTP)."
     }
   },
   "ccdv-f-q053": {
@@ -845,6 +1105,11 @@
       "b": "Sai vì độ trễ mạng hoàn toàn không ảnh hưởng đến nội dung token mô hình sinh ra.",
       "c": "Sai vì nhận sai bản chất bất định của LLM thành bug ứng dụng sẽ tạo kỳ vọng không thực tế rằng có thể sửa thành giống nhau 100% tuyệt đối.",
       "d": "Đúng vì giải thích chính xác bản chất lấy mẫu của LLM và trấn an stakeholder bằng các biện pháp kiểm soát thực tế (validation, retry, temperature)."
+    },
+    "memoryKeyword": {
+      "cueVi": "Stakeholder lo vì chạy cùng prompt 2 lần ra kết quả hơi khác nhau",
+      "answerKeyword": "LLMs are non-deterministic by default + control via validation/retries/temperature",
+      "roteFormula": "Khác nhẹ là bình thường (bất định do sampling) → Kiểm soát bằng validation, retry, temperature."
     }
   },
   "ccdv-f-q054": {
@@ -861,6 +1126,11 @@
       "b": "Đúng vì Message Batches API sinh ra cho các tác vụ khối lượng lớn chấp nhận độ trễ trong 24 giờ để tiết kiệm đáng kể chi phí.",
       "c": "Sai vì ép giảm `max_tokens` có thể làm cụt báo cáo mà vẫn phải trả đơn giá đồng bộ cao hơn.",
       "d": "Sai vì chọn model nhỏ nhất bất chấp chất lượng sẽ làm hỏng độ chính xác của báo cáo phân tích."
+    },
+    "memoryKeyword": {
+      "cueVi": "10.000 tài liệu chạy qua đêm, tối ưu chi phí, sáng hôm sau mới lấy",
+      "answerKeyword": "Message Batches API (24h window, reduced cost)",
+      "roteFormula": "Nghìn tài liệu chạy qua đêm + ưu tiên rẻ → Chọn ngay Message Batches API (xong trong 24h)."
     }
   },
   "ccdv-f-q055": {
@@ -877,6 +1147,11 @@
       "b": "Đúng vì áp dụng đúng nguyên tắc chống indirect prompt injection: tách biệt dữ liệu không tin cậy khỏi chỉ dẫn hệ thống và chặn hành động nhạy cảm bằng guardrails/hooks.",
       "c": "Sai vì lời đề nghị lịch sự trong prompt không thể ngăn chặn kẻ tấn công cố tình chèn lệnh vào trang web.",
       "d": "Sai vì model tuân thủ chỉ dẫn mạnh hơn đôi khi thậm chí còn dễ nghe theo chỉ dẫn độc hại ẩn trong văn bản hơn nếu không có cơ chế cô lập và guardrails."
+    },
+    "memoryKeyword": {
+      "cueVi": "Trang web chứa chữ ẩn lừa model tiết lộ system prompt (indirect injection)",
+      "answerKeyword": "Treat page content as untrusted input + separate + guardrails/hooks",
+      "roteFormula": "Chống prompt injection từ web → Coi nội dung web là untrusted, tách khỏi chỉ dẫn + guardrails/hooks."
     }
   },
   "ccdv-f-q056": {
@@ -893,6 +1168,11 @@
       "b": "Đúng vì MCP server chuẩn hóa các thao tác REST API tồn kho thành tools dùng chung cho nhiều ứng dụng và bảo trì độc lập hoàn toàn.",
       "c": "Sai vì dán cả dữ liệu tồn kho vào ngữ cảnh làm lãng phí token khổng lồ và không cung cấp dữ liệu cập nhật trực tiếp.",
       "d": "Sai vì built-in tools không tự biết lược đồ, xác thực hay đường dẫn của các REST API nội bộ tùy chỉnh."
+    },
+    "memoryKeyword": {
+      "cueVi": "Dịch vụ tồn kho REST API muốn tái sử dụng cho nhiều ứng dụng Claude",
+      "answerKeyword": "Build an MCP server exposing inventory tools",
+      "roteFormula": "Tái sử dụng tool cho NHIỀU app + bảo trì độc lập → Xây dựng MCP server."
     }
   },
   "ccdv-f-q057": {
@@ -909,6 +1189,11 @@
       "b": "Sai vì tắt log với các lỗi không gọi trực làm mất hoàn toàn khả năng quan sát và điều tra sự cố về sau.",
       "c": "Đúng vì phân tầng mức độ lỗi theo tác động thực tế và khả năng phục hồi rồi định tuyến đúng kênh giúp vừa phản ứng kịp sự cố nghiêm trọng vừa tránh làm nhiễu kỹ sư trực.",
       "d": "Sai vì giữ nguyên một mức severity chung giữ nguyên lỗi ban đầu là không phân tách được sự cố khẩn cấp với lỗi thường."
+    },
+    "memoryKeyword": {
+      "cueVi": "Mọi lỗi API đang log cùng mức, muốn tách lỗi cần gọi trực (page) vs ghi log",
+      "answerKeyword": "Categorize errors by severity (impact & recoverability) → route channel",
+      "roteFormula": "Phân loại lỗi theo Tác động & Khả năng phục hồi → Nặng thì page on-call, nhẹ thì log."
     }
   },
   "ccdv-f-q058": {
@@ -925,6 +1210,11 @@
       "b": "Sai vì trộn lẫn tham số sinh văn bản (`temperature`, `max_tokens`) với bài toán sức chứa ngữ cảnh đầu vào.",
       "c": "Sai vì xóa system prompt làm mất toàn bộ quy tắc hành vi cốt lõi của ứng dụng mà chỉ tiết kiệm được một phần nhỏ token.",
       "d": "Sai vì thay đổi một tham số không hề liên quan trên production không giải quyết nguyên nhân gốc rễ."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chạm giới hạn context window, junior đòi tăng `temperature` để sửa",
+      "answerKeyword": "Temperature = randomness (unrelated) → fix by summarization or chunking",
+      "roteFormula": "Temperature chỉ chỉnh độ ngẫu nhiên, KHÔNG mở rộng context → Sửa bằng tóm tắt hoặc chunking."
     }
   },
   "ccdv-f-q059": {
@@ -941,6 +1231,11 @@
       "b": "Sai vì streaming sinh ra để hiển thị dần cho người dùng tương tác trực tiếp chứ không tối ưu cho xử lý hàng loạt chạy nền.",
       "c": "Sai vì chạy tuần tự từng email một qua Messages API quá chậm và lãng phí thông lượng cũng như chi phí.",
       "d": "Sai vì gọi đồng thời thời gian thực gây áp lực rate limits, phức tạp quản lý hàng đợi và không được giảm giá như Batch API."
+    },
+    "memoryKeyword": {
+      "cueVi": "10.000 email qua đêm, không tương tác, khung giờ linh hoạt vài tiếng",
+      "answerKeyword": "Batch API (non-interactive, flexible completion window)",
+      "roteFormula": "Lô lớn qua đêm + không tương tác → Dùng Batch API (Message Batches API)."
     }
   },
   "ccdv-f-q060": {
@@ -957,6 +1252,11 @@
       "b": "Sai vì chỉ thêm chữ dặn trong prompt vẫn để cùng một agent ôm đồm cả ba miền nghiệp vụ và dễ tiếp tục nhầm lẫn.",
       "c": "Đúng vì mô hình orchestrator–subagent phân tách rạch ròi từng chuyên môn (billing, shipping, product) giúp mỗi subagent tập trung, không làm trùng việc và dễ tổng hợp.",
       "d": "Sai vì thứ tự cố định cứng nhắc không linh hoạt với những phiếu chỉ có 1–2 vấn đề hoặc các vấn đề phụ thuộc lẫn nhau khác nhau."
+    },
+    "memoryKeyword": {
+      "cueVi": "1 agent ôm cả billing + shipping + product bị rối, hay làm lặp lại",
+      "answerKeyword": "Orchestrator agent delegating to dedicated subagents",
+      "roteFormula": "1 agent ôm nhiều mảng bị loạn → Đổi sang Orchestrator chia về các Subagent chuyên trách."
     }
   },
   "ccdv-f-q061": {
@@ -973,6 +1273,11 @@
       "b": "Sai vì schema lỏng lẻo làm tăng nguy cơ mô hình truyền tham số sai định dạng sang dịch vụ định giá.",
       "c": "Sai vì không xử lý lỗi khiến ngoại lệ mạng/API từ dịch vụ ngoài dễ làm gián đoạn hoặc sập vòng lặp agent.",
       "d": "Đúng vì hội tụ đủ 3 chuẩn mực production cho custom tool: schema chặt, mô tả chính xác và xử lý lỗi API bên ngoài tường minh."
+    },
+    "memoryKeyword": {
+      "cueVi": "Best practice khi viết custom tool gọi dịch vụ định giá bên ngoài",
+      "answerKeyword": "Clear schema + precise description + explicit error handling",
+      "roteFormula": "Chuẩn vàng viết custom tool: Schema rõ + Mô tả khi nào gọi chuẩn + Xử lý lỗi tường minh."
     }
   },
   "ccdv-f-q062": {
@@ -989,6 +1294,11 @@
       "b": "Sai vì vội nâng cấp lên model đắt hơn khi chưa chứng minh được nguyên nhân do mô hình.",
       "c": "Sai vì dựng cả kiến trúc RAG trước khi chẩn đoán có thể làm tốn công vô ích hoặc che giấu lỗi thực sự trong luồng xây dựng request.",
       "d": "Sai vì sửa prompt vội vàng khi chưa xác minh nguyên nhân có thể không giải quyết được lỗi (nếu lỗi đến từ dữ liệu ngữ cảnh hoặc prompt injection)."
+    },
+    "memoryKeyword": {
+      "cueVi": "Production thỉnh thoảng ra thông tin không có trong input → làm gì ĐẦU TIÊN?",
+      "answerKeyword": "Examine production traces first (before assuming hallucination)",
+      "roteFormula": "Đừng vội kết luận ảo giác → Bước 1 luôn là xem Production traces để tìm nguyên nhân gốc."
     }
   },
   "ccdv-f-q063": {
@@ -1005,6 +1315,11 @@
       "b": "Sai vì HTTP 429 Rate Limit nằm trong danh sách các lỗi tạm thời được Claude SDK tự động retry mặc định.",
       "c": "Sai vì SDK có chủ động retry bằng exponential backoff chứ không chỉ ghi log rồi bỏ qua.",
       "d": "Đúng vì mô tả chính xác hành vi chính thức của Claude SDK: tự động retry nhiều lỗi tạm thời (kể cả 429 và 5xx) và cho phép tùy biến cấu hình."
+    },
+    "memoryKeyword": {
+      "cueVi": "Claude SDK xử lý lỗi tạm thời (mạng, 429 rate-limit) thế nào?",
+      "answerKeyword": "SDK provides default retry behavior (configurable/extensible)",
+      "roteFormula": "Lỗi mạng/429/5xx → SDK đã có sẵn auto-retry mặc định và cho phép cấu hình thêm."
     }
   },
   "ccdv-f-q064": {
@@ -1021,6 +1336,11 @@
       "b": "Đúng vì xử lý tận gốc cả ba vấn đề (trùng lặp, mâu thuẫn, lỗi thời) bằng audit và refactor thành bộ chỉ dẫn chuẩn xác duy nhất.",
       "c": "Sai vì giữ lại nội dung trùng lặp và lỗi thời vẫn tiếp tục tiêu tốn token và làm loãng sự chú ý của mô hình.",
       "d": "Sai vì chia cắt prompt ra nhiều nơi không tự giải quyết các mâu thuẫn nội tại mà còn làm phân mảnh nguồn quy tắc."
+    },
+    "memoryKeyword": {
+      "cueVi": "System prompt phình hàng trăm dòng, trùng lặp, mâu thuẫn, lỗi thời",
+      "answerKeyword": "Audit for overlap/contradiction/obsolete + refactor",
+      "roteFormula": "Prompt phình & mâu thuẫn → Kiểm toán (Audit) lọc trùng/mâu thuẫn rồi Refactor gọn sạch."
     }
   },
   "ccdv-f-q065": {
@@ -1037,6 +1357,11 @@
       "b": "Sai vì thiết kế bó chặt theo một ứng dụng đầu tiên làm mất tính chuẩn hóa và tái sử dụng của MCP server.",
       "c": "Sai vì chỉ chạy trên máy cá nhân lập trình viên khiến các ứng dụng Claude chạy thực tế không thể kết nối tới được.",
       "d": "Sai vì bỏ MCP và nhúng riêng vào từng app gây trùng lặp code tích hợp và tăng gấp nhiều lần chi phí bảo trì."
+    },
+    "memoryKeyword": {
+      "cueVi": "Xây dựng & triển khai MCP server cho nhiều ứng dụng Claude cùng tích hợp",
+      "answerKeyword": "Define resources/tools/prompts + communication pattern + accessible hosting",
+      "roteFormula": "Deploy MCP dùng chung → Định nghĩa đủ resources/tools/prompts + chọn giao thức + host truy cập được."
     }
   },
   "ccdv-f-q066": {
@@ -1053,6 +1378,11 @@
       "b": "Sai vì đánh đồng dữ liệu ngoài với chỉ dẫn nội bộ mở toang cánh cửa cho tấn công prompt injection.",
       "c": "Sai vì đẩy sang một app khác bảo mật yếu hơn chỉ tạo thêm lỗ hổng mà không hề xử lý an toàn dữ liệu.",
       "d": "Sai vì chặn tuyệt đối mọi dữ liệu bên ngoài sẽ làm tê liệt luôn các tính năng hợp lệ của ứng dụng."
+    },
+    "memoryKeyword": {
+      "cueVi": "Ứng dụng nhận đầu vào không đáng tin cậy (untrusted input) từ bên ngoài",
+      "answerKeyword": "Validated & sanitized + treated as data (not instructions)",
+      "roteFormula": "Untrusted input → Luôn Validate + Làm sạch + Coi là DỮ LIỆU thuần, cấm hiểu thành chỉ dẫn."
     }
   },
   "ccdv-f-q067": {
@@ -1069,6 +1399,11 @@
       "b": "Đúng vì theo dõi, pin phiên bản ổn định và nâng cấp có kiểm thử giúp tái lập hành vi chuẩn xác và rollback ngay khi có regression.",
       "c": "Sai vì phó mặc cho bên thứ ba mà không ghi nhận version nội bộ sẽ khiến sự cố mất dấu phiên bản lặp lại.",
       "d": "Sai vì tự động cập nhật mọi thứ lên bản mới nhất làm tăng tần suất thay đổi không kiểm soát và dễ gây thêm lỗi hồi quy."
+    },
+    "memoryKeyword": {
+      "cueVi": "Cập nhật plugin gây lỗi hồi quy, không nhớ bản cũ nào chạy ổn",
+      "answerKeyword": "Explicit plugin version tracking (identify, pin, deliberate upgrade)",
+      "roteFormula": "Chống vỡ do update plugin → Theo dõi version tường minh + Pin (khóa) bản ổn định."
     }
   },
   "ccdv-f-q068": {
@@ -1085,6 +1420,11 @@
       "b": "Sai vì hardcode cấu hình trong mã ứng dụng khiến việc thay đổi theo môi trường trở nên cứng nhắc và dễ gây nhầm lẫn.",
       "c": "Đúng vì tập trung cấu hình có kiểm soát phiên bản (Git) theo từng môi trường đảm bảo tính tái lập, kiểm toán và rollback an toàn.",
       "d": "Sai vì dev, staging và production cần các cấu hình khác nhau (như thông số kiểm thử, khóa API riêng, phiên bản chuẩn bị phát hành)."
+    },
+    "memoryKeyword": {
+      "cueVi": "Dev/Staging/Prod có cấu hình model, prompt, plugin nằm rải rác khắp nơi",
+      "answerKeyword": "Consolidate into version-controlled config (pinning & versioning)",
+      "roteFormula": "Cấu hình 3 môi trường phân tán → Gom vào 1 nơi có Version Control (pin model + version prompt/plugin)."
     }
   },
   "ccdv-f-q069": {
@@ -1101,6 +1441,11 @@
       "b": "Đúng vì thiết lập ranh giới kiểm chứng độc lập (validation, dẫn nguồn, hiệu chuẩn độ tin cậy) để bảo vệ hệ thống phía sau khỏi sai sót thực tế.",
       "c": "Sai vì duyệt thủ công 100% mọi phản hồi quá tốn kém và triệt tiêu luôn lợi ích tự động hóa ở những trường hợp rủi ro thấp dễ xác thực tự động.",
       "d": "Sai vì dòng cảnh báo văn bản chỉ để người đọc thấy chứ hoàn toàn không ngăn được hệ thống tự động phía sau tiêu thụ dữ liệu sai."
+    },
+    "memoryKeyword": {
+      "cueVi": "Claude trả lời nghe rất tự tin nhưng sai sự thật, downstream tin sái cổ",
+      "answerKeyword": "Apply skepticism: validation + sourcing + confidence calibration",
+      "roteFormula": "Tự tin ≠ Đúng → Phải hoài nghi: thêm bước xác thực, đòi trích nguồn hoặc hiệu chuẩn độ tin cậy."
     }
   },
   "ccdv-f-q070": {
@@ -1117,6 +1462,11 @@
       "b": "Sai vì dựng cả hệ thống nhiều subagent cho vài bước đơn giản là thiết kế quá phức tạp (over-engineering).",
       "c": "Sai vì dồn cả xử lý chuẩn lẫn ngoại lệ vào một prompt khổng lồ khiến khó kiểm tra hợp lệ và khó gỡ lỗi.",
       "d": "Đúng vì kết hợp tối ưu độ ổn định của workflow cho đường đi chuẩn và sự linh hoạt của agent đúng tại điểm ngoại lệ cần suy luận."
+    },
+    "memoryKeyword": {
+      "cueVi": "Xử lý hóa đơn: đa số theo bước cố định, lâu lâu mới có hóa đơn dị biệt",
+      "answerKeyword": "Workflow for standard path + Agent at decision point",
+      "roteFormula": "Luồng chuẩn ổn định + ít ngoại lệ khó → Dùng Workflow cho đường chính, chỉ gọi Agent tại điểm ngoại lệ."
     }
   },
   "ccdv-f-q071": {
@@ -1133,6 +1483,11 @@
       "b": "Sai vì lúc Claude đọc được system prompt thì thông tin nhạy cảm đã bị gửi ra ngoài ranh giới ứng dụng rồi.",
       "c": "Sai vì ghi log toàn bộ dữ liệu thô còn tạo thêm rủi ro lộ mật khẩu trong log và chỉ phát hiện sau khi dữ liệu đã bị gửi đi.",
       "d": "Sai vì cố tình để hổng diện che phủ bộ lọc chờ sự cố production mới vá là không đáp ứng yêu cầu bảo mật."
+    },
+    "memoryKeyword": {
+      "cueVi": "Văn bản user có số tài khoản/mật khẩu cấm gửi sang Claude",
+      "answerKeyword": "Define application boundary + filtering or redaction at boundary",
+      "roteFormula": "Cấm gửi dữ liệu nhạy cảm ra ngoài → Vẽ ranh giới ứng dụng + Lọc/Che mờ (redact) ngay tại biên."
     }
   },
   "ccdv-f-q072": {
@@ -1149,6 +1504,11 @@
       "b": "Đúng vì đặt quy tắc hành vi/định dạng tập trung ở system prompt và dành user message cho đầu vào từng lượt giúp đầu ra nhất quán và dễ bảo trì.",
       "c": "Sai vì giữ nguyên cách tổ chức rải rác hiện tại không hề sửa được lỗi thiếu nhất quán.",
       "d": "Sai vì nhân bản quy tắc ở cả hai nơi gây lãng phí token và dễ sinh mâu thuẫn khi sau này chỉnh sửa một bên mà quên bên kia."
+    },
+    "memoryKeyword": {
+      "cueVi": "Format đầu ra lộn xộn vì chỉ dẫn nằm rải rác cả system prompt lẫn user message",
+      "answerKeyword": "Consolidate instructions in system prompt; user messages = user input",
+      "roteFormula": "Gom hết luật & format về System Prompt; User message chỉ chứa dữ liệu đầu vào của user."
     }
   },
   "ccdv-f-q073": {
@@ -1165,6 +1525,11 @@
       "b": "Đúng vì bao gồm đầy đủ tất cả biến số quyết định hóa đơn Claude API: số request, input tokens, output tokens, đơn giá model và hiệu quả prompt caching.",
       "c": "Sai vì output tokens có đơn giá cao hơn input tokens và thường chiếm tỷ trọng chi phí rất lớn, không thể bỏ qua.",
       "d": "Sai vì không thể ước lượng chi phí nếu thiếu số token đầu vào và đầu ra trước khi ra mắt."
+    },
+    "memoryKeyword": {
+      "cueVi": "Lập dự toán chi phí (cost projection) trước khi lên production",
+      "answerKeyword": "Volume + avg input/output tokens + model pricing + caching benefits",
+      "roteFormula": "Công thức dự toán chi phí = Lượng request × (Input + Output tokens theo bảng giá model) − lợi ích Caching."
     }
   },
   "ccdv-f-q074": {
@@ -1181,6 +1546,11 @@
       "b": "Sai vì điểm benchmark tổng quát không chắc phản ánh đúng hiệu năng trên dữ liệu đặc thù của ứng dụng và bỏ qua yếu tố chi phí/độ trễ.",
       "c": "Sai vì chọn cảm tính model tầm trung mà không có tiêu chí đo lường không đảm bảo đạt chất lượng hay ngân sách.",
       "d": "Sai vì chọn model đắt và chậm nhất chỉ từ câu nói chung chung có thể gây vượt ngân sách hoặc vi phạm độ trễ cho phép."
+    },
+    "memoryKeyword": {
+      "cueVi": "PM bảo \"cứ chọn model nào kết quả tốt nhất\" nhưng không nói ngân sách/độ trễ",
+      "answerKeyword": "Ask for quality, latency, and cost targets first",
+      "roteFormula": "PM nói chung chung → Hỏi chốt 3 mục tiêu (Chất lượng – Độ trễ – Chi phí) rồi mới chọn model."
     }
   },
   "ccdv-f-q075": {
@@ -1197,6 +1567,11 @@
       "b": "Sai vì chạy theo công nghệ mới nhất không đảm bảo phù hợp với nhu cầu cụ thể của bài toán.",
       "c": "Sai vì chỉ ưu tiên làm nhanh trước mắt bỏ qua tính tái sử dụng, khả năng tương tác chuẩn và bảo trì dài hạn.",
       "d": "Đúng vì căn cứ vào đúng ba trục kiến trúc quyết định: phạm vi sử dụng, nhu cầu tái sử dụng và bối cảnh tích hợp."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chọn giữa built-in tool, custom tool, Skill hay MCP server",
+      "answerKeyword": "Matches scope, reuse needs, and integration context",
+      "roteFormula": "Chọn công cụ nào? → Căn cứ 3 tiêu chí: Phạm vi bài toán + Mức tái sử dụng + Bối cảnh tích hợp."
     }
   },
   "ccdv-f-q076": {
@@ -1213,6 +1588,11 @@
       "b": "Sai vì tăng `max_turns` chỉ cho phép chạy nhiều lượt gọi công cụ hơn chứ không ngăn nội dung 40 tệp tích tụ thẳng vào ngữ cảnh chính.",
       "c": "Sai vì giảm `effort` chỉ bớt token suy luận ở mỗi lượt, còn toàn bộ nội dung 40 tệp vẫn nạp đầy vào hội thoại chính như cũ.",
       "d": "Sai vì `include_partial_messages` chỉ thay đổi cách truyền hiển thị đầu ra theo thời gian thực, không giảm dung lượng kết quả công cụ tích tụ trong ngữ cảnh."
+    },
+    "memoryKeyword": {
+      "cueVi": "Agent review đọc 40 file nhưng muốn hội thoại chính luôn gọn nhẹ",
+      "answerKeyword": "Delegate to subagent (AgentDefinition) → only final summary returns",
+      "roteFormula": "Đọc 40 file sợ phình ngữ cảnh chính → Đẩy cho Subagent đọc hết, chỉ trả bản tóm tắt về cha."
     }
   },
   "ccdv-f-q077": {
@@ -1229,6 +1609,11 @@
       "b": "Sai vì compaction kích hoạt dựa trên dung lượng context window chứ không phải `max_turns`, và việc chép tay quy tắc vào từng tin nhắn rất dễ lỗi.",
       "c": "Sai vì compaction tóm tắt lại lịch sử cũ nên rất dễ lược bỏ hoặc diễn đạt lệch các quy tắc chi tiết ban đầu, không giữ nguyên văn.",
       "d": "Sai vì `PostToolUse` chỉ chạy sau từng lần gọi tool chứ không phải ngay trước lúc nén, và quy tắc nằm trong subagent không áp dụng cho phiên chính."
+    },
+    "memoryKeyword": {
+      "cueVi": "Lưu bản ghi đầy đủ TRƯỚC khi nén + giữ quy tắc format sống sót sau nén",
+      "answerKeyword": "PreCompact hook (archive transcript) + rule in CLAUDE.md",
+      "roteFormula": "Lưu trước khi nén = `PreCompact` hook • Luật sống mãi qua mọi lần nén = để trong `CLAUDE.md`."
     }
   },
   "ccdv-f-q078": {
@@ -1249,6 +1634,11 @@
       "d": "Sai: Pydantic AI không đi kèm sẵn một OpenTelemetry collector tích hợp để tự gửi thẳng lên CloudWatch; việc cấu hình collector vẫn phải thiết lập ngoài bằng SDK OpenTelemetry.",
       "e": "Sai: Strands Agents SDK không phụ thuộc hạ tầng đám mây (cloud-agnostic), chạy được ở nhiều môi trường và gọi được các model bên thứ ba như Anthropic, OpenAI, Ollama.",
       "f": "Sai: Ngược hoàn toàn — LangGraph mạnh về đồ thị rẽ nhánh và vòng lặp phức tạp chứ không bị giới hạn ở một đường tuyến tính đơn nhất."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 2] So sánh Strands Agents SDK vs LangGraph (OpenTelemetry & đồ thị)",
+      "answerKeyword": "A: Strands (model-agnostic + OpenTelemetry) • C: LangGraph (directed graphs)",
+      "roteFormula": "Chọn 2: Strands = đa model + OpenTelemetry chuẩn • LangGraph = đồ thị có hướng (branch/loop)."
     }
   },
   "ccdv-f-q079": {
@@ -1265,6 +1655,11 @@
       "b": "Đúng: Parallelization by voting chạy lặp lại cùng một tác vụ nhiều lần song song rồi chọn kết quả xuất hiện nhiều nhất để tăng độ tin cậy.",
       "c": "Sai: Evaluator-optimizer là vòng lặp có một LLM tạo đáp án và một LLM khác chấm/phê bình để chỉnh sửa qua nhiều vòng; tình huống này không có bước phê bình hay chỉnh sửa.",
       "d": "Sai: Prompt chaining nối tiếp đầu ra bước trước làm đầu vào bước sau, còn 5 lần chạy ở đây hoàn toàn độc lập với nhau."
+    },
+    "memoryKeyword": {
+      "cueVi": "Chạy CÙNG 1 prompt gian lận 5 lần rồi chọn kết luận theo đa số",
+      "answerKeyword": "Parallelization by voting (Song song hóa theo bỏ phiếu)",
+      "roteFormula": "Chạy y hệt 5 lần lấy số đông → Parallelization by voting (khác với sectioning là chia mảng)."
     }
   },
   "ccdv-f-q080": {
@@ -1281,6 +1676,11 @@
       "b": "Đúng: Gán tác vụ phân loại đơn giản tần suất cao cho một subagent riêng chạy model nhanh và rẻ hơn (như Haiku) là chiến lược tối ưu chi phí chuẩn mực.",
       "c": "Sai: Vòng lặp evaluator-optimizer dùng cho cải tiến chất lượng lặp lại chứ không tự động dùng model rẻ hơn và còn tăng thêm số lần gọi LLM.",
       "d": "Sai: Thành viên trong agent team không tự động mặc định dùng model rẻ nhất; việc gán model là tùy chọn cấu hình rõ ràng."
+    },
+    "memoryKeyword": {
+      "cueVi": "Bước phân loại cảm xúc siêu đơn giản chạy rất nhiều lần trước suy luận nặng",
+      "answerKeyword": "Route to dedicated subagent with faster, cheaper model",
+      "roteFormula": "Bước nhẹ chạy nhiều → Tách Subagent riêng gắn model nhỏ/nhanh/rẻ hơn (độc lập với model chính)."
     }
   },
   "ccdv-f-q081": {
@@ -1301,6 +1701,11 @@
       "d": "Sai: Token counting chỉ báo số lượng token ước tính của tin nhắn chứ không tự cắt tỉa hay tóm tắt ngữ cảnh.",
       "e": "Sai: Batch processing dành cho xử lý hàng loạt bất đồng bộ, không liên quan đến quản lý cửa sổ ngữ cảnh của hội thoại chạy dài.",
       "f": "Sai: Files API dùng để tải lên và tái sử dụng tệp tài liệu, không tóm tắt lịch sử hay dọn tool results trong phiên."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 2] Tự tóm tắt phía server + dọn kết quả tool cũ khi sát context limit",
+      "answerKeyword": "A: Compaction (tóm tắt server-side) • B: Context editing (dọn tool cũ)",
+      "roteFormula": "Chọn 2 cặp bài trùng quản lý ngữ cảnh nền tảng: Compaction + Context editing."
     }
   },
   "ccdv-f-q082": {
@@ -1317,6 +1722,11 @@
       "b": "Sai: Không có quy tắc chung nào cấm tính năng Beta kết hợp với prompt caching hay batch processing; tính tương thích tùy thuộc từng tính năng.",
       "c": "Sai: Giới hạn cửa sổ ngữ cảnh phụ thuộc vào model được chọn chứ không bị ép trần 200k chỉ vì tính năng đang ở trạng thái Beta.",
       "d": "Đúng: Tính năng Beta có rủi ro thay đổi lớn hoặc bị ngưng hỗ trợ mà không có bảo đảm sản xuất như GA, cực kỳ nguy hiểm cho hệ thống billing cốt lõi."
+    },
+    "memoryKeyword": {
+      "cueVi": "Xây lõi billing production dựa hoàn toàn vào tính năng gắn nhãn Beta",
+      "answerKeyword": "Beta features may change/discontinue, not guaranteed for production like GA",
+      "roteFormula": "Cẩn thận nhãn Beta → Có thể thay đổi hoặc bị hủy, không đảm bảo ổn định production như GA."
     }
   },
   "ccdv-f-q083": {
@@ -1333,6 +1743,11 @@
       "b": "Sai: Chép thủ công chữ tin nhắn ghép vào prompt không phải cơ chế tiếp nối phiên của SDK và không tái tạo chính xác trạng thái công cụ đã chạy.",
       "c": "Sai: Hardcode nội dung tệp vào system prompt vừa lặp lại việc `resume` đã làm sẵn vừa không mở rộng được cho ngữ cảnh phức tạp.",
       "d": "Sai: `tool_use_id` chỉ định danh một lần gọi công cụ chứ không phải phiên làm việc, còn tham số `model` dùng để chọn model Claude."
+    },
+    "memoryKeyword": {
+      "cueVi": "Agent SDK: gọi `query` lần 2 muốn nhớ ngữ cảnh lần 1 (\"nó\")",
+      "answerKeyword": "Capture `session_id` from SystemMessage `init` → pass to `resume`",
+      "roteFormula": "Nhớ phiên giữa 2 lần `query()` → Lấy `session_id` từ `SystemMessage(init)` truyền vào `resume`."
     }
   },
   "ccdv-f-q084": {
@@ -1349,6 +1764,11 @@
       "b": "Sai: `Grep` chỉ dùng để tìm kiếm chuỗi/regex trong tệp, không thể thực thi lệnh `git` hay lệnh shell.",
       "c": "Sai: `WebFetch` chỉ lấy nội dung từ các trang web từ xa, không chạy được lệnh trên máy cục bộ.",
       "d": "Sai: `AskUserQuestion` dùng để hỏi người dùng chọn phương án làm rõ, không dùng để chạy lệnh quản lý phiên bản."
+    },
+    "memoryKeyword": {
+      "cueVi": "Built-in tool nào của Agent SDK cho chạy `git status`, stage, commit?",
+      "answerKeyword": "Bash (runs terminal commands, scripts & git)",
+      "roteFormula": "Chạy lệnh terminal / git / script → Chọn built-in tool `Bash`."
     }
   },
   "ccdv-f-q085": {
@@ -1365,6 +1785,11 @@
       "b": "Sai: `continue: true` sẽ nối tiếp phiên gần nhất, làm trộn lẫn các tác vụ phân loại độc lập thành một cuộc hội thoại phình to duy nhất.",
       "c": "Sai: `resume` dùng để mở lại một phiên đã tồn tại theo ID thật, không phải cơ chế tạo phiên không ghi đĩa bằng ID ngẫu nhiên.",
       "d": "Sai: Chính TypeScript SDK mới hỗ trợ `persistSession: false`; Python SDK luôn lưu phiên xuống ổ đĩa nên chuyển sang Python sẽ không đạt mục tiêu."
+    },
+    "memoryKeyword": {
+      "cueVi": "Hàng nghìn tác vụ 1 lượt độc lập, không cần resume, tránh ghi đĩa",
+      "answerKeyword": "`persistSession: false` on each `query()` call",
+      "roteFormula": "Chạy 1 phát bỏ luôn + không ghi ổ đĩa → Đặt `persistSession: false`."
     }
   },
   "ccdv-f-q086": {
@@ -1381,6 +1806,11 @@
       "b": "Sai: Phiên `--resume` không bị khóa cứng không có lối thoát; tài liệu quy định rõ cơ chế fallback về thứ tự ưu tiên chọn model chuẩn.",
       "c": "Sai: Claude Code bắt buộc phải gọi tới model thực để xử lý yêu cầu mới; không thể chạy tiếp bằng cache cục bộ khi model đã ngừng hoạt động.",
       "d": "Sai: Việc fallback trong phiên resume hiện tại không tự ý ghi đè vĩnh viễn tệp cấu hình `/model` đã lưu cho tất cả các phiên tương lai."
+    },
+    "memoryKeyword": {
+      "cueVi": "`claude --resume` phiên cũ dùng Opus 4.6 nhưng model này đã bị retire",
+      "answerKeyword": "Falls through to normal precedence order (does not fail outright)",
+      "roteFormula": "Resume gặp model đã khai tử → Không lỗi sập, tự rơi xuống thứ tự ưu tiên model thông thường."
     }
   },
   "ccdv-f-q087": {
@@ -1399,6 +1829,11 @@
       "c": "Đúng: Kết quả batch chỉ khả dụng để tải xuống trong 29 ngày sau khi tạo; sau mốc đó chỉ còn bản ghi metadata chứ không tải được file kết quả.",
       "d": "Sai: Batch được cô lập trong phạm vi từng Workspace; chỉ API key thuộc đúng Workspace tạo batch mới xem và tải kết quả được.",
       "e": "Sai: Tham số `stream: true` không được hỗ trợ trên từng request bên trong batch và sẽ gây lỗi validation; Batch API luôn xuất kết quả ra tệp."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 3] Giới hạn vận hành của Message Batches API",
+      "answerKeyword": "A: 100k req / 256MB • B: Hết hạn sau 24h • C: Tải kết quả trong 29 ngày",
+      "roteFormula": "Bộ 3 con số vàng Batch API: 100.000 req / 256 MB • Hết hạn 24 giờ • Lưu tải kết quả 29 ngày."
     }
   },
   "ccdv-f-q088": {
@@ -1415,6 +1850,11 @@
       "b": "Sai: Dù `settings.local.json` ưu tiên cao hơn cho các cấu hình thường, riêng `permissions` được gộp chứ không ghi đè thay thế nên không xóa được `deny` cấp dự án.",
       "c": "Sai: `allow` và `deny` xung đột không triệt tiêu nhau để hỏi người dùng; `deny` trực tiếp chặn luôn lệnh.",
       "d": "Sai: Khởi động lại Claude Code không làm thay đổi cơ chế gộp quyền; quy tắc `deny` cấp dự án vẫn tiếp tục chặn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Project `settings.json` có `deny curl`, dev tự thêm `allow curl` ở `settings.local.json`",
+      "answerKeyword": "Curl stays blocked (rules merge; local allow cannot override project deny)",
+      "roteFormula": "Phân quyền là GỘP (merge), KHÔNG ghi đè → `deny` luôn thắng, `curl` vẫn bị chặn!"
     }
   },
   "ccdv-f-q089": {
@@ -1431,6 +1871,11 @@
       "b": "Sai: Bắt từng nhóm copy file và tự cấu hình tay vi phạm trực tiếp yêu cầu nạp nguyên khối không copy file và rất khó cập nhật đồng bộ.",
       "c": "Sai: `CLAUDE.md` chỉ là tệp chỉ dẫn và bộ nhớ ngữ cảnh, không phải định dạng đóng gói plugin để khai báo hooks hay MCP servers động.",
       "d": "Sai: Một hàm custom tool đơn lẻ không thể đóng gói các thành phần khác bản chất như skills, subagents, lifecycle hooks và kết nối MCP."
+    },
+    "memoryKeyword": {
+      "cueVi": "Đóng gói skills + subagent + hooks + MCP thành 1 gói dùng chung cho nhiều dự án",
+      "answerKeyword": "Plugin directory (`skills/`, `agents/`, `hooks/`, `.mcp.json`) via `plugins`",
+      "roteFormula": "Gom trọn bộ skills + agents + hooks + MCP để tái sử dụng → Đóng thành Plugin."
     }
   },
   "ccdv-f-q090": {
@@ -1447,6 +1892,11 @@
       "b": "Sai: Haiku 4.5 là phân khúc nhanh nhất và rẻ nhất dành cho tác vụ thời gian thực khối lượng cực lớn ưu tiên chi phí thấp, không phải điểm cân bằng tốt nhất giữa tốc độ và trí tuệ cho coding/phân tích hằng ngày.",
       "c": "Đúng: Sonnet 5.5 được mô tả là sự kết hợp tối ưu nhất giữa tốc độ và trí thông minh, khớp chuẩn với code generation, data analysis và agentic tool use cho tập người dùng lớn.",
       "d": "Sai: Mythos 5.1 thuộc nhóm năng lực cao nhất và chỉ mở giới hạn cho chương trình Project Glasswing, không mở rộng cho đại trà người dùng."
+    },
+    "memoryKeyword": {
+      "cueVi": "Cần model cân bằng tốt nhất giữa Tốc độ & Trí thông minh (code, phân tích, tool)",
+      "answerKeyword": "Claude Sonnet 5.5 (best speed + intelligence balance)",
+      "roteFormula": "Cân bằng Tốc độ + Thông minh (không cần đắt nhất) → Chọn dòng Sonnet (`Claude Sonnet 5.5`)."
     }
   },
   "ccdv-f-q091": {
@@ -1463,6 +1913,11 @@
       "b": "Sai: Giới hạn RPM công bố áp dụng trực tiếp cho Messages API theo từng model; Message Batches API có bộ giới hạn riêng.",
       "c": "Sai: Lỗi `429 rate_limit_error` không có nghĩa là API key bị thu hồi (key bị thu hồi hoặc sai sẽ trả về `401 authentication_error`).",
       "d": "Sai: Vượt quá kích thước payload yêu cầu sẽ trả về lỗi `413 request_too_large`, không phải `429`."
+    },
+    "memoryKeyword": {
+      "cueVi": "Dưới xa ngưỡng RPM nhưng tăng traffic gấp 3 trong vài phút vẫn dính 429",
+      "answerKeyword": "Acceleration limits → ramp traffic up gradually",
+      "roteFormula": "Dưới RPM mà tăng vọt dính 429 → Chạm Acceleration limits (giới hạn gia tốc) → Tăng tải từ từ."
     }
   },
   "ccdv-f-q092": {
@@ -1481,6 +1936,11 @@
       "c": "Sai (không chọn): Khi `stop_reason` là `max_tokens`, chính việc tăng `max_tokens` là cách giải quyết trực tiếp lỗi bị cắt cụt đầu ra này.",
       "d": "Đúng (cần chọn): Lỗi `401 authentication_error` do API key hết hạn; phải đổi khóa xác thực hợp lệ chứ streaming hay `max_tokens` không giải quyết được.",
       "e": "Sai (không chọn): Lỗi `504 timeout_error` khi sinh nội dung rất lớn ở chế độ không streaming chính là tình huống được khuyến nghị sửa bằng cách chuyển sang Streaming API (hoặc Message Batches API)."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 3] Lỗi nào mà bật Streaming hay tăng `max_tokens` đều KHÔNG sửa được?",
+      "answerKeyword": "A: 413 request_too_large • B: 409 conflict_error • D: 401 authentication_error",
+      "roteFormula": "Streaming/max_tokens KHÔNG chữa được 3 lỗi: 413 (quá cỡ gửi lên), 409 (xung đột), 401 (hết hạn key)."
     }
   },
   "ccdv-f-q093": {
@@ -1497,6 +1957,11 @@
       "b": "Sai: Tham số `effort` điều chỉnh mức độ suy luận Claude dùng khi trả lời chứ không phải công cụ đếm token trước khi gửi.",
       "c": "Sai: Files API dùng để tải lên và tái sử dụng tệp giữa các request, không tự trả về tổng số token của cả prompt trước khi chạy.",
       "d": "Sai: `budget_tokens` chỉ đặt trần số token suy nghĩ (thinking tokens) trong extended thinking chứ không đếm toàn bộ token của prompt trước khi gửi."
+    },
+    "memoryKeyword": {
+      "cueVi": "Cần biết chính xác prompt tốn bao nhiêu token TRƯỚC KHI gửi",
+      "answerKeyword": "Token counting call (Token counting API)",
+      "roteFormula": "Đếm token trước khi gửi để giữ ngân sách → Gọi Token counting API."
     }
   },
   "ccdv-f-q094": {
@@ -1513,6 +1978,11 @@
       "b": "Sai: Thống kê token sử dụng được gửi qua trường `usage` trong các sự kiện `message_start` và `message_delta`, không phải qua `signature_delta`.",
       "c": "Sai: Việc che mờ nội dung thinking vì an toàn dùng cơ chế riêng (`redacted_thinking`), không phải ý nghĩa của `signature_delta`.",
       "d": "Sai: `signature_delta` phục vụ xác minh tính toàn vẹn của khối thinking, không liên quan đến chuyển đổi fallback model."
+    },
+    "memoryKeyword": {
+      "cueVi": "Streaming extended thinking có sự kiện `signature_delta` ngay trước khi kết thúc khối",
+      "answerKeyword": "Signature to verify integrity of the thinking block",
+      "roteFormula": "Thấy `signature_delta` → Chữ ký xác minh tính toàn vẹn (integrity) của khối `thinking`."
     }
   },
   "ccdv-f-q095": {
@@ -1529,6 +1999,11 @@
       "b": "Sai: Claude không tra cứu câu trả lời có sẵn từ bảng embedding; mô hình tính toán và sinh động từng token mới.",
       "c": "Sai: Mô hình không tạo toàn bộ bài viết trong một lượt forward pass duy nhất; mỗi token mới đòi hỏi một bước dự đoán nối tiếp các token trước.",
       "d": "Sai: Claude sinh token tuần tự từ trái sang phải chứ không sinh ngẫu nhiên rồi sắp xếp lại."
+    },
+    "memoryKeyword": {
+      "cueVi": "Tại sao Claude tạo chữ từng mảnh thay vì hiện cả bài một lúc?",
+      "answerKeyword": "Autoregressively predicts the next token (Tự hồi quy từng token)",
+      "roteFormula": "Sinh chữ từng mảnh → Do cơ chế dự đoán tự hồi quy (autoregressive) từng token tiếp theo."
     }
   },
   "ccdv-f-q096": {
@@ -1545,6 +2020,11 @@
       "b": "Sai: Chỉ chuyển vị trí sang user message mà không khai báo `cache_control` thì prompt caching hoàn toàn không kích hoạt, vẫn phải trả đủ 100% giá cho 6.000 token.",
       "c": "Sai: Giảm `max_tokens` chỉ giới hạn độ dài đầu ra (output tokens), không hề giảm chi phí của 6.000 input tokens lặp lại.",
       "d": "Sai: Rút gọn tên thuộc tính chỉ giảm được một ít token, còn mỗi request vẫn bị tính full giá đầu vào (và tên quá ngắn còn làm giảm độ hiểu của mô hình), kém hiệu quả hơn nhiều so với prompt caching."
+    },
+    "memoryKeyword": {
+      "cueVi": "System prompt + tools 6.000 token lặp lại mỗi 30 giây, muốn giảm chi phí input",
+      "answerKeyword": "5-minute ephemeral `cache_control` breakpoint",
+      "roteFormula": "Tiền tố 6k token lặp mỗi 30s → Gắn `cache_control` loại `ephemeral` (5 phút) để đọc từ cache."
     }
   },
   "ccdv-f-q097": {
@@ -1561,6 +2041,11 @@
       "b": "Sai: Đọc thẳng vào luồng chính vẫn phải trả toàn bộ chi phí token trong quá trình đọc trước khi `/compact`, và nén lại còn có nguy cơ mất chi tiết quan trọng của luồng chính.",
       "c": "Sai: `effort: low` chỉ giảm lượng token suy luận chứ không giảm số token của nội dung hàng chục tệp bị nạp vào ngữ cảnh.",
       "d": "Sai: Gộp hết tệp vào một MCP resource duy nhất vẫn đổ nguyên khối nội dung đó vào ngữ cảnh của agent chính khi fetch, không hề cô lập ngữ cảnh."
+    },
+    "memoryKeyword": {
+      "cueVi": "Research agent đọc hàng chục file không muốn làm phình ngữ cảnh chính",
+      "answerKeyword": "Delegate file exploration to a subagent (only final summary returns)",
+      "roteFormula": "Đọc nhiều file tránh rác ngữ cảnh chính → Giao Subagent đọc rồi chỉ trả tóm tắt về cha."
     }
   },
   "ccdv-f-q098": {
@@ -1577,6 +2062,11 @@
       "b": "Sai: Chạy 20 lần lấy đa số chỉ che đậy triệu chứng chứ không giúp phát hiện hay sửa câu chữ mơ hồ trong prompt.",
       "c": "Sai: Nhờ chính mô hình diễn đạt lại không phải thước đo độc lập đáng tin cậy bằng việc kiểm tra độ rõ ràng với một người đọc ít ngữ cảnh.",
       "d": "Sai: Giảm `temperature` xuống 0 chỉ làm giảm độ ngẫu nhiên khi chọn token chứ không làm câu chữ mơ hồ trở nên rõ nghĩa hơn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Prompt tóm tắt luật ra cấu trúc lúc thế này lúc thế khác → làm gì để lộ chỗ mơ hồ?",
+      "answerKeyword": "Show prompt to a colleague with minimal context (Golden Rule)",
+      "roteFormula": "Thử nghiệm đồng nghiệp ít ngữ cảnh → Người đọc thấy mơ hồ chỗ nào thì Claude cũng rối chỗ đó!"
     }
   },
   "ccdv-f-q099": {
@@ -1593,6 +2083,11 @@
       "b": "Sai: Lenient JSON parser chỉ sửa lỗi nhỏ như dấu phẩy thừa, không thể khôi phục phần dữ liệu chưa từng được sinh ra vì bị cắt cụt.",
       "c": "Sai: Giảm `max_tokens` càng làm phản hồi dễ bị cắt cụt hơn nữa, đi ngược lại cách khắc phục.",
       "d": "Sai: Nguyên nhân là chạm giới hạn độ dài đầu ra chứ không phải lỗi mạng; gửi lại y hệt request cũ sẽ tiếp tục bị cắt cụt tương tự."
+    },
+    "memoryKeyword": {
+      "cueVi": "JSON bị cắt ngang gây decode error, kiểm tra thấy `stop_reason: \"max_tokens\"`",
+      "answerKeyword": "Catch decode error + check `stop_reason === \"max_tokens\"` + treat as incomplete",
+      "roteFormula": "JSON đứt gãy + `stop_reason: \"max_tokens\"` → Bắt lỗi, check stop_reason và coi là phản hồi chưa đủ."
     }
   },
   "ccdv-f-q100": {
@@ -1613,6 +2108,11 @@
       "d": "Sai: Chấm dứt phiên và bắt người dùng làm lại từ đầu quá gián đoạn trong khi lỗi này hoàn toàn có thể để agent tự sửa ngay.",
       "e": "Sai: Âm thầm tạo ticket với `priority = null` gây hỏng chất lượng dữ liệu nghiệp vụ thay vì để mô hình bổ sung đúng giá trị.",
       "f": "Sai: Biến trường bắt buộc thành tùy chọn chỉ che giấu lỗi chứ không giải quyết vấn đề ticket bị thiếu mức ưu tiên."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 3] Agent gọi `create_ticket` hay quên trường bắt buộc `priority`",
+      "answerKeyword": "A: `is_error: true` • B: `strict: true` • C: Cải thiện tool description",
+      "roteFormula": "Combo 3 cách trị quên tham số tool: Trả `is_error: true` + Bật `strict: true` + Viết rõ mô tả tool."
     }
   },
   "ccdv-f-q101": {
@@ -1629,6 +2129,11 @@
       "b": "Sai: Ký tự ngắt trang (form feed) không mang metadata nguồn có cấu trúc và không phải cơ chế phân tách đáng tin cậy với LLM.",
       "c": "Sai: Tiêu đề Markdown chỉ phân tách thị giác sơ sài, dễ lẫn với chính các tiêu đề `#` bên trong nội dung tài liệu và kém tin cậy hơn XML có thẻ `<source>`.",
       "d": "Sai: Biến văn bản dài thành CSV phá vỡ cấu trúc đoạn văn, mạch trình bày và không phải cách làm chuẩn để giữ trích dẫn nguồn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Ghép 2 tài liệu thành văn bản thuần làm Claude hay gán nhầm nguồn",
+      "answerKeyword": "XML tags: `<documents>` → `<document>` + `<source>` + `<document_content>`",
+      "roteFormula": "Chống nhầm nguồn nhiều tài liệu → Bọc thẻ XML `<documents><document><source> + <document_content>`."
     }
   },
   "ccdv-f-q102": {
@@ -1645,6 +2150,11 @@
       "b": "Sai: Chạy background không vượt qua giới hạn độ sâu 3 cấp, và `effort: low` không liên quan gì đến việc cấm sinh subagent con.",
       "c": "Sai: Không có giới hạn riêng 2 cấp cho foreground, và `permissionMode: plan` không phải cách chuẩn để tắt quyền sinh subagent.",
       "d": "Sai: Có giới hạn độ sâu mặc định (3 cấp), và subagent sinh con qua công cụ `Agent` chứ không phải qua `Bash`."
+    },
+    "memoryKeyword": {
+      "cueVi": "Subagent đẻ subagent: độ sâu tối đa mặc định & cách chặn đẻ con?",
+      "answerKeyword": "Default 3 levels (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`) • Bỏ `Agent` tool",
+      "roteFormula": "Độ sâu mặc định = 3 cấp • Chặn sinh con = bỏ tool `Agent` (hoặc đưa vào `disallowedTools`)."
     }
   },
   "ccdv-f-q103": {
@@ -1665,6 +2175,11 @@
       "d": "Sai: Nén tệp chỉ làm giảm dung lượng file chứ không hề bảo vệ hay ẩn PII — ai giải nén ra đều đọc được nguyên vẹn.",
       "e": "Đúng: Rà soát nhu cầu trường dữ liệu thực tế của bên phân tích là cơ sở để quyết định cắt bỏ PII không cần thiết trước khi xuất.",
       "f": "Sai: Nhắc miệng khách hàng không giảm bớt rủi ro phơi bày PII và không thể thay thế biện pháp kỹ thuật redaction."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 3] Gửi transcript có tên/email/số TK cho bên phân tích thứ 3 (PII)",
+      "answerKeyword": "A: Redact/mask PII • B: Tối thiểu PII cả log nội bộ • E: Rà soát trường thực cần",
+      "roteFormula": "3 nguyên tắc PII: Che/ẩn trước khi xuất + Áp dụng cả log nội bộ + Chỉ gửi đúng trường cần thiết."
     }
   },
   "ccdv-f-q104": {
@@ -1685,6 +2200,11 @@
       "d": "Sai: Ghi số tài khoản và số dư dạng plaintext vào log ứng dụng tạo rủi ro rò rỉ dữ liệu tài chính nhạy cảm cực lớn.",
       "e": "Đúng: Kiểm tra phân quyền độc lập tại backend trước khi đặt lệnh giao dịch tạo rào chắn tin cậy tách biệt ngay cả khi agent bị thao túng.",
       "f": "Sai: Cho phép phiên đọc chéo dữ liệu khách hàng khác phá vỡ hoàn toàn nguyên tắc cô lập multi-tenant và bảo mật dữ liệu."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 3] Fintech multi-tenant: đọc tài khoản & đặt lệnh giao dịch an toàn",
+      "answerKeyword": "A: Scope theo customer phiên • B: Sàng lọc injection ở ghi chú • E: Backend check quyền lại",
+      "roteFormula": "3 lớp bảo vệ Fintech: Khóa phạm vi từng khách + Lọc injection đầu vào + Backend xác thực lại trước khi giao dịch."
     }
   },
   "ccdv-f-q105": {
@@ -1701,6 +2221,11 @@
       "b": "Sai: Lỗi 400 do vi phạm điều kiện tính năng HIPAA chứ hoàn toàn không phải do thiếu `max_tokens`.",
       "c": "Sai: Chuyển dữ liệu y tế (PHI) sang tổ chức không có thỏa thuận BAA là hành vi vi phạm nghiêm trọng luật HIPAA.",
       "d": "Sai: Hạn chế tính năng HIPAA được API cưỡng chế chặn cứng bằng lỗi 400, không phải cảnh báo tham khảo."
+    },
+    "memoryKeyword": {
+      "cueVi": "Tổ chức HIPAA gọi `code execution` bị lỗi 400 (chưa có ZDR)",
+      "answerKeyword": "Remove code execution + use only HIPAA-eligible features",
+      "roteFormula": "HIPAA báo 400 với tính năng không hỗ trợ → Gỡ ngay `code execution`, chỉ dùng tính năng trong bảng HIPAA."
     }
   },
   "ccdv-f-q106": {
@@ -1721,6 +2246,11 @@
       "d": "Sai: `*`, chuỗi rỗng và bỏ trống matcher đều khớp mọi sự kiện giống nhau, nhưng lập luận rằng \"chỉ duy nhất `*` tắt regex\" là sai.",
       "e": "Sai: `PostToolUse` chỉ chạy sau khi công cụ đã thực thi xong nên không thể chặn trước khi chạy như `PreToolUse`.",
       "f": "Sai: Async hook chạy bất đồng bộ sau khi luồng agent đã đi tiếp nên không thể chặn, sửa hay chèn ngữ cảnh vào thao tác đó bất kể `asyncTimeout` lớn bao nhiêu."
+    },
+    "memoryKeyword": {
+      "cueVi": "[Chọn 3] Thứ tự ưu tiên Hook & phạm vi file cấu hình settings",
+      "answerKeyword": "A: `deny > defer > ask > allow` • B: `.local.json` gitignored • C: Managed cao nhất",
+      "roteFormula": "3 luật Hook/Settings: `deny > defer > ask > allow` • `settings.local.json` chỉ cá nhân • Managed policy cao nhất."
     }
   },
   "ccdv-f-q107": {
@@ -1737,6 +2267,11 @@
       "b": "Sai: Dấu phẩy chỉ kích hoạt chế độ khớp chuỗi chính xác từng phần tử chứ không bật regex, hơn nữa cách này lại liệt kê tường minh từng tên công cụ — trái với yêu cầu đề bài.",
       "c": "Sai: Không có quy tắc nào trong tài liệu lọc theo độ dài tên lớn hơn 4 ký tự khi bỏ trống matcher.",
       "d": "Sai: Trong regex dấu `+` là bộ lặp \"một hoặc nhiều lần ký tự đứng trước\", không phải toán tử nối chuỗi."
+    },
+    "memoryKeyword": {
+      "cueVi": "Hook khớp cả `Bash`, `Edit`, `NotebookEdit` bằng regex matcher",
+      "answerKeyword": "`Bash|Edit.*` (regex unanchored substring match)",
+      "roteFormula": "Khớp cả `Bash`, `Edit`, `NotebookEdit` → Dùng regex `Bash|Edit.*` (khớp chuỗi con)."
     }
   },
   "ccdv-f-q108": {
@@ -1753,6 +2288,11 @@
       "b": "Sai: `bypassPermissions` cho phép chạy toàn bộ mọi công cụ chứ không hề thu hẹp vào tập công cụ an toàn tối thiểu — cực kỳ nguy hiểm.",
       "c": "Sai: Chế độ `plan` vẫn đẩy các công cụ ghi file/shell sang `canUseTool` khiến CI pipeline bị treo khi không có người duyệt.",
       "d": "Sai: Ném ngoại lệ chưa bắt trong callback `canUseTool` là hành vi không được định nghĩa chính thức (undefined behavior) và làm lại thủ công thứ `dontAsk` đã hỗ trợ khai báo chuẩn."
+    },
+    "memoryKeyword": {
+      "cueVi": "Agent SDK chạy CI tự động: chỉ chạy đúng tập tool cố định, ngoài tập tự từ chối",
+      "answerKeyword": "`allowed_tools` + `permission_mode: \"dontAsk\"`",
+      "roteFormula": "CI không người duyệt + chỉ cho chạy đúng danh sách → `allowed_tools` + `permission_mode: \"dontAsk\"`."
     }
   },
   "ccdv-f-q109": {
@@ -1769,6 +2309,11 @@
       "b": "Sai: `WebFetch` là công cụ đọc trang web công khai, không thiết kế cho lời gọi REST gateway nội bộ có xác thực và xử lý request/response có cấu trúc.",
       "c": "Sai: Skill chỉ cung cấp kiến thức/hướng dẫn quy trình chứ không kết nối tới dữ liệu sống, nên Claude không thể biết số dư thực tế của khách hàng.",
       "d": "Sai: Hệ thống sổ cái độc quyền nội bộ không có tích hợp công khai nào nên MCP server cộng đồng không thể có lược đồ hay quyền truy cập tới nó."
+    },
+    "memoryKeyword": {
+      "cueVi": "Agent SDK gọi REST gateway nội bộ độc quyền (chưa có MCP/SDK công khai)",
+      "answerKeyword": "Custom tool registered via in-process MCP server",
+      "roteFormula": "Gọi API nội bộ riêng trong Agent SDK → Tạo Custom tool đăng ký qua In-process MCP server."
     }
   },
   "ccdv-f-q110": {
@@ -1785,6 +2330,11 @@
       "b": "Sai: Tự viết custom tool đọc file và chạy shell lặp lại tính năng built-in đã có sẵn, gây lãng phí công sức cho một tác vụ làm một lần.",
       "c": "Sai: Dựng MCP server mạng bên ngoài chỉ để đọc file và chạy shell cục bộ gây thêm hạ tầng, độ trễ và độ phức tạp không cần thiết.",
       "d": "Sai: Skill chỉ cung cấp hướng dẫn kiến thức chứ không thể thực thi thao tác đọc file hay chạy lệnh shell thay cho built-in tools."
+    },
+    "memoryKeyword": {
+      "cueVi": "Tool nhỏ nội bộ đọc/sửa file, chạy shell, tìm code 1 lần (không hệ thống ngoài)",
+      "answerKeyword": "Built-in tools (`Read`, `Edit`, `Bash`, `Glob`, `Grep`)",
+      "roteFormula": "Chỉ đọc/sửa/tìm file & chạy shell cục bộ → Dùng luôn Built-in tools của SDK, khỏi chế thêm."
     }
   }
 }

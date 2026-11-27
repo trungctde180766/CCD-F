@@ -11,6 +11,7 @@ import { QUESTIONS } from '../data/questionBank';
 import {
   getCompletePerOptionRationales,
   getExamSmartHint,
+  getMemoryKeywordHook,
   getVietnameseExplanation,
   getVietnameseOptionTranslation,
   getVietnamesePromptSummary,
@@ -190,5 +191,16 @@ describe('Authentication, Telemetry, Bilingual EN/VI & Complete Per-Option Ratio
     expect(status).toBe(200);
     expect(parsed.ok).toBe(true);
     expect(typeof parsed.dbConnected).toBe('boolean');
+  });
+
+  it('provides a tailored rote-learning memoryKeyword hook for all 110 questions', () => {
+    expect(QUESTIONS.length).toBe(110);
+    for (const q of QUESTIONS) {
+      const hook = getMemoryKeywordHook(q);
+      expect(hook.cueVi.trim().length).toBeGreaterThan(5);
+      expect(hook.answerKeyword.trim().length).toBeGreaterThan(5);
+      expect(hook.roteFormula.trim().length).toBeGreaterThan(10);
+      expect(QUESTIONS_VI[q.id]?.memoryKeyword).toBeDefined();
+    }
   });
 });

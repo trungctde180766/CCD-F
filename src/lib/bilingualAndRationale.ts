@@ -4,11 +4,18 @@ import type { ContentBlock, Question, QuestionOption } from '../types';
 
 export type LanguageDisplayMode = 'en' | 'bilingual' | 'vi';
 
+export interface MemoryKeywordHook {
+  cueVi: string;
+  answerKeyword: string;
+  roteFormula: string;
+}
+
 export interface QuestionVietnameseTranslation {
   promptVi: string;
   optionsVi: Record<string, string>;
   explanationVi: string;
   optionRationalesVi: Record<string, string>;
+  memoryKeyword?: MemoryKeywordHook;
 }
 
 export const QUESTIONS_VI: Record<string, QuestionVietnameseTranslation> =
@@ -77,6 +84,25 @@ export function getVietnameseExplanation(question: Question): string {
     return entry.explanationVi;
   }
   return extractBlockText(question.explanation);
+}
+
+/**
+ * Returns the easy-to-memorize rote-learning keyword hook ("Keyword học vẹt")
+ * linking the question cue directly to the key answer phrase.
+ */
+export function getMemoryKeywordHook(question: Question): MemoryKeywordHook {
+  const entry = QUESTIONS_VI[question.id];
+  if (entry?.memoryKeyword) {
+    return entry.memoryKeyword;
+  }
+  const correctIds = question.interaction.correctOptionIds
+    .map((id) => id.toUpperCase())
+    .join(', ');
+  return {
+    cueVi: question.title,
+    answerKeyword: `Đáp án ${correctIds}`,
+    roteFormula: `Nhớ trọng tâm đáp án ${correctIds}.`,
+  };
 }
 
 /**

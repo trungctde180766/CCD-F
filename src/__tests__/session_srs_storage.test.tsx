@@ -63,13 +63,14 @@ describe('BlockRenderer & Anti-Spoiler DOM Guarantees', () => {
       />
     );
 
-    // Before submission, explanation text and "Đáp án đúng" must not exist anywhere in DOM
+    // Before submission, explanation text, memory keyword, and "Đáp án đúng" must not exist anywhere in DOM
     expect(container.textContent).not.toContain('Giải thích chi tiết');
+    expect(container.textContent).not.toContain('Keyword học vẹt');
     expect(container.textContent).not.toContain('Đáp án đúng là C');
     expect(container.textContent).not.toContain('Đáp án đúng theo nguồn');
     expect(container.innerHTML).not.toContain('emerald-500');
 
-    // After submission, explanation is shown exclusively in Vietnamese (no English explanation)
+    // After submission, explanation & rote-learning keyword are shown in Vietnamese (no English explanation)
     rerender(
       <QuestionCard
         question={q001}
@@ -85,6 +86,8 @@ describe('BlockRenderer & Anti-Spoiler DOM Guarantees', () => {
       />
     );
 
+    expect(container.textContent).toContain('Keyword học vẹt');
+    expect(container.textContent).toContain('Deterministic output filtering');
     expect(container.textContent).toContain('Giải thích chi tiết');
     expect(container.textContent).toContain('Đáp án đúng là C');
     expect(container.textContent).toContain('Đáp án đúng theo nguồn');
