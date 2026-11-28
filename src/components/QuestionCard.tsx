@@ -26,6 +26,7 @@ import {
   getVietnameseExplanation,
   getVietnameseOptionTranslation,
   getVietnamesePromptSummary,
+  hasVietnameseTranslation,
   LanguageDisplayMode,
   loadLanguageDisplayMode,
   saveLanguageDisplayMode,
@@ -163,8 +164,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       ? 'Chưa phân loại'
       : question.difficulty;
 
-  const showEnglish = langMode === 'en' || langMode === 'bilingual';
-  const showVietnamese = langMode === 'vi' || langMode === 'bilingual';
+  const hasVi = hasVietnameseTranslation(question.id);
+  const sourceOptionExplanationMap = useMemo(() => {
+    return new Map((question.optionExplanations || []).map((oe) => [oe.optionId, oe.content]));
+  }, [question.optionExplanations]);
+
+  const showEnglish = !hasVi || langMode === 'en' || langMode === 'bilingual';
+  const showVietnamese = hasVi && (langMode === 'vi' || langMode === 'bilingual');
 
   return (
     <article
@@ -199,52 +205,54 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </span>
         </div>
 
-        {/* Right Controls: Language Switcher (EN / Song ngữ / VI) + Exam Assistant + Bookmark + Note */}
+        {/* Right Controls: Language Switcher (when VI available) + Exam Assistant + Bookmark + Note */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {/* Bilingual Switcher — Available in Study, Practice, AND Exam modes! */}
-          <div
-            className="inline-flex items-center rounded-lg p-0.5 bg-slate-200/80 dark:bg-slate-800 border border-slate-300/80 dark:border-slate-700 text-xs"
-            role="group"
-            aria-label="Chế độ ngôn ngữ hiển thị"
-          >
-            <Globe className="w-3.5 h-3.5 ml-1.5 mr-1 text-brand-600 dark:text-brand-400 shrink-0" />
-            <button
-              type="button"
-              onClick={() => handleChangeLangMode('en')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
-                langMode === 'en'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-              title="Chỉ hiển thị tiếng Anh gốc"
+          {/* Bilingual Switcher — Only for courses with Vietnamese translations */}
+          {hasVi && (
+            <div
+              className="inline-flex items-center rounded-lg p-0.5 bg-slate-200/80 dark:bg-slate-800 border border-slate-300/80 dark:border-slate-700 text-xs"
+              role="group"
+              aria-label="Chế độ ngôn ngữ hiển thị"
             >
-              EN
-            </button>
-            <button
-              type="button"
-              onClick={() => handleChangeLangMode('bilingual')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
-                langMode === 'bilingual'
-                  ? 'bg-brand-600 text-white shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-              title="Song ngữ Anh – Việt (Hỗ trợ dịch ngay trong lúc thi & học)"
-            >
-              Song ngữ EN+VI
-            </button>
-            <button
-              type="button"
-              onClick={() => handleChangeLangMode('vi')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
-                langMode === 'vi'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-              title="Ưu tiên hiển thị bản dịch tiếng Việt"
-            >
-              VI
-            </button>
-          </div>
+              <Globe className="w-3.5 h-3.5 ml-1.5 mr-1 text-brand-600 dark:text-brand-400 shrink-0" />
+              <button
+                type="button"
+                onClick={() => handleChangeLangMode('en')}
+                className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+                  langMode === 'en'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+                title="Chỉ hiển thị tiếng Anh gốc"
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChangeLangMode('bilingual')}
+                className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+                  langMode === 'bilingual'
+                    ? 'bg-brand-600 text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+                title="Song ngữ Anh – Việt (Hỗ trợ dịch ngay trong lúc thi & học)"
+              >
+                Song ngữ EN+VI
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChangeLangMode('vi')}
+                className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+                  langMode === 'vi'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+                title="Ưu tiên hiển thị bản dịch tiếng Việt"
+              >
+                VI
+              </button>
+            </div>
+          )}
 
           {/* Smart Hint Button (Works in Exam, Practice & Study) */}
           <button
@@ -261,21 +269,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <span>Gợi ý</span>
           </button>
 
-          {/* Rote-Learning Keyword Hook Toggle ("Keyword học vẹt") */}
-          <button
-            type="button"
-            onClick={() => setShowMemoryKeyword((prev) => !prev)}
-            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              showMemoryKeyword
-                ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/60 dark:text-violet-200 border border-violet-300 dark:border-violet-700'
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-            }`}
-            title="Hiện nhanh Keyword học vẹt (mẹo nhớ nhanh gắn liền đáp án đúng)"
-            aria-expanded={showMemoryKeyword}
-          >
-            <Zap className="w-3.5 h-3.5 text-violet-500" />
-            <span>Học vẹt</span>
-          </button>
+          {/* Rote-Learning Keyword Hook Toggle ("Keyword học vẹt") — Only for courses with VI keywords */}
+          {hasVi && (
+            <button
+              type="button"
+              onClick={() => setShowMemoryKeyword((prev) => !prev)}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                showMemoryKeyword
+                  ? 'bg-violet-100 text-violet-900 dark:bg-violet-900/60 dark:text-violet-200 border border-violet-300 dark:border-violet-700'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+              }`}
+              title="Hiện nhanh Keyword học vẹt (mẹo nhớ nhanh gắn liền đáp án đúng)"
+              aria-expanded={showMemoryKeyword}
+            >
+              <Zap className="w-3.5 h-3.5 text-violet-500" />
+              <span>Học vẹt</span>
+            </button>
+          )}
 
           {mode === 'exam' && onToggleExamFlag && (
             <button
@@ -390,7 +400,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         )}
 
         {/* Rote-Learning Keyword Hook Drawer (Only mounted when user clicks "Học vẹt" before reveal) */}
-        {showMemoryKeyword && !effectiveRevealed && (
+        {hasVi && showMemoryKeyword && !effectiveRevealed && (
           <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-violet-50 via-fuchsia-50/70 to-amber-50/60 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/30 border border-violet-300 dark:border-violet-800 text-xs sm:text-sm space-y-2 shadow-2xs">
             <div className="font-bold text-violet-900 dark:text-violet-200 flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5">
@@ -609,33 +619,57 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   )}
                 </div>
 
-                {/* Per-option explanation ("Vì sao ĐÚNG / Vì sao SAI") rendered for EVERY option when revealed! */}
-                {effectiveRevealed && optionRationale && (
-                  <div
-                    className={`mx-3.5 sm:mx-4 mb-3.5 p-3 rounded-lg border text-xs sm:text-sm space-y-1.5 ${
-                      optionRationale.isCorrect
-                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
-                        : 'bg-white/95 dark:bg-slate-950/70 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200'
-                    }`}
-                  >
-                    <div className="font-bold flex items-center gap-1.5">
-                      {optionRationale.isCorrect ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                      )}
-                      <span>
-                        {optionRationale.isCorrect
-                          ? `Vì sao phương án ${option.id.toUpperCase()} ĐÚNG:`
-                          : `Vì sao phương án ${option.id.toUpperCase()} SAI (${optionRationale.flawCategoryVi}):`}
-                      </span>
-                    </div>
+                {/* Per-option explanation when revealed: Vietnamese rationales for CCDV-F; verbatim source optionExplanations for CCAO-F */}
+                {effectiveRevealed &&
+                  (hasVi && optionRationale ? (
+                    <div
+                      className={`mx-3.5 sm:mx-4 mb-3.5 p-3 rounded-lg border text-xs sm:text-sm space-y-1.5 ${
+                        optionRationale.isCorrect
+                          ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                          : 'bg-white/95 dark:bg-slate-950/70 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        {optionRationale.isCorrect ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                        )}
+                        <span>
+                          {optionRationale.isCorrect
+                            ? `Vì sao phương án ${option.id.toUpperCase()} ĐÚNG:`
+                            : `Vì sao phương án ${option.id.toUpperCase()} SAI (${optionRationale.flawCategoryVi}):`}
+                        </span>
+                      </div>
 
-                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed pt-0.5">
-                      {optionRationale.vietnameseReason}
-                    </p>
-                  </div>
-                )}
+                      <p className="text-slate-800 dark:text-slate-200 leading-relaxed pt-0.5">
+                        {optionRationale.vietnameseReason}
+                      </p>
+                    </div>
+                  ) : !hasVi && sourceOptionExplanationMap.get(option.id)?.length ? (
+                    <div
+                      className={`mx-3.5 sm:mx-4 mb-3.5 p-3 rounded-lg border text-xs sm:text-sm space-y-1.5 ${
+                        gradeResult?.correctOptionIds.includes(option.id)
+                          ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                          : 'bg-white/95 dark:bg-slate-950/70 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        {gradeResult?.correctOptionIds.includes(option.id) ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                        )}
+                        <span>
+                          Giải thích phương án {option.id.toUpperCase()} (từ nguồn):
+                        </span>
+                      </div>
+                      <BlockRenderer
+                        blocks={sourceOptionExplanationMap.get(option.id) || []}
+                        className="text-xs sm:text-sm"
+                      />
+                    </div>
+                  ) : null)}
               </div>
             );
           })}
@@ -865,41 +899,43 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </div>
             )}
 
-            {/* Always-Visible Rote-Learning Keyword Card ("Keyword học vẹt") after reveal */}
-            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-violet-50 via-fuchsia-50/60 to-amber-50/50 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/30 border border-violet-300 dark:border-violet-800 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
-                  <Zap className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                  <span>Keyword học vẹt (Mẹo nhớ nhanh đi thi)</span>
-                </h3>
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-violet-200/70 dark:bg-violet-900/70 text-violet-800 dark:text-violet-200">
-                  Nhớ nhanh 2 giây
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm">
-                <div className="p-3 rounded-lg bg-white/85 dark:bg-slate-900/75 border border-violet-200/80 dark:border-violet-800/60">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    📌 Thấy đề nhắc tới
+            {/* Always-Visible Rote-Learning Keyword Card ("Keyword học vẹt") after reveal (CCDV-F) */}
+            {hasVi && (
+              <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-violet-50 via-fuchsia-50/60 to-amber-50/50 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/30 border border-violet-300 dark:border-violet-800 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                    <span>Keyword học vẹt (Mẹo nhớ nhanh đi thi)</span>
+                  </h3>
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-violet-200/70 dark:bg-violet-900/70 text-violet-800 dark:text-violet-200">
+                    Nhớ nhanh 2 giây
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm">
+                  <div className="p-3 rounded-lg bg-white/85 dark:bg-slate-900/75 border border-violet-200/80 dark:border-violet-800/60">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      📌 Thấy đề nhắc tới
+                    </div>
+                    <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                      {memoryHook.cueVi}
+                    </div>
                   </div>
-                  <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
-                    {memoryHook.cueVi}
+                  <div className="p-3 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-800/70">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                      🎯 Quét từ khóa đáp án
+                    </div>
+                    <div className="font-bold text-emerald-950 dark:text-emerald-100 mt-0.5">
+                      {memoryHook.answerKeyword}
+                    </div>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-800/70">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                    🎯 Quét từ khóa đáp án
-                  </div>
-                  <div className="font-bold text-emerald-950 dark:text-emerald-100 mt-0.5">
-                    {memoryHook.answerKeyword}
-                  </div>
-                </div>
+                <p className="text-xs sm:text-sm text-violet-950 dark:text-violet-100 font-medium leading-relaxed">
+                  ⚡ <strong>Câu học vẹt:</strong> {memoryHook.roteFormula}
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-violet-950 dark:text-violet-100 font-medium leading-relaxed">
-                ⚡ <strong>Câu học vẹt:</strong> {memoryHook.roteFormula}
-              </p>
-            </div>
+            )}
 
-            {/* Main Explanation (100% Vietnamese) */}
+            {/* Main Explanation: 100% Vietnamese for CCDV-F; verbatim English source blocks (including callouts & Learn more) for CCAO-F */}
             <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -907,55 +943,101 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   <span>Giải thích chi tiết</span>
                 </h3>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Tiếng Việt • Bộ câu hỏi CCDV-F
+                  {hasVi ? 'Tiếng Việt • Bộ câu hỏi CCDV-F' : 'Nguyên văn từ nguồn • CCAO-F'}
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-sm text-indigo-950 dark:text-indigo-100">
-                <p className="leading-relaxed whitespace-pre-line">
-                  {getVietnameseExplanation(question)}
-                </p>
-              </div>
+              {hasVi ? (
+                <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-sm text-indigo-950 dark:text-indigo-100">
+                  <p className="leading-relaxed whitespace-pre-line">
+                    {getVietnameseExplanation(question)}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+                  <BlockRenderer blocks={question.explanation} />
+                </div>
+              )}
             </div>
 
-            {/* Complete Per-Option Analysis ("Vì sao câu này đúng / Vì sao câu này sai") for ALL 110 questions */}
-            <div className="p-4 sm:p-5 rounded-xl bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4 text-brand-500" />
-                <span>
-                  Giải thích chi tiết Vì sao Đúng / Vì sao Sai cho từng phương án (A, B, C, D...)
-                </span>
-              </h3>
-              <div className="space-y-3">
-                {perOptionRationales.map((rat) => (
-                  <div
-                    key={rat.optionId}
-                    className={`p-3.5 rounded-xl border ${
-                      rat.isCorrect
-                        ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}
-                  >
-                    <div className="font-mono text-xs font-bold mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                      <span
-                        className={
-                          rat.isCorrect
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : 'text-rose-700 dark:text-rose-400'
-                        }
-                      >
-                        Phương án {rat.optionId.toUpperCase()} —{' '}
-                        {rat.isCorrect ? '✓ ĐÁP ÁN ĐÚNG' : `✗ PHƯƠNG ÁN SAI (${rat.flawCategoryVi})`}
-                      </span>
+            {/* Per-Option Breakdown */}
+            {hasVi ? (
+              <div className="p-4 sm:p-5 rounded-xl bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
+                  <HelpCircle className="w-4 h-4 text-brand-500" />
+                  <span>
+                    Giải thích chi tiết Vì sao Đúng / Vì sao Sai cho từng phương án (A, B, C, D...)
+                  </span>
+                </h3>
+                <div className="space-y-3">
+                  {perOptionRationales.map((rat) => (
+                    <div
+                      key={rat.optionId}
+                      className={`p-3.5 rounded-xl border ${
+                        rat.isCorrect
+                          ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="font-mono text-xs font-bold mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                        <span
+                          className={
+                            rat.isCorrect
+                              ? 'text-emerald-700 dark:text-emerald-400'
+                              : 'text-rose-700 dark:text-rose-400'
+                          }
+                        >
+                          Phương án {rat.optionId.toUpperCase()} —{' '}
+                          {rat.isCorrect
+                            ? '✓ ĐÁP ÁN ĐÚNG'
+                            : `✗ PHƯƠNG ÁN SAI (${rat.flawCategoryVi})`}
+                        </span>
+                      </div>
+
+                      <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+                        {rat.vietnameseReason}
+                      </p>
                     </div>
-
-                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
-                      {rat.vietnameseReason}
-                    </p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : question.optionExplanations && question.optionExplanations.length > 0 ? (
+              <div className="p-4 sm:p-5 rounded-xl bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
+                  <HelpCircle className="w-4 h-4 text-brand-500" />
+                  <span>Giải thích riêng theo từng lựa chọn (từ nguồn)</span>
+                </h3>
+                <div className="space-y-3">
+                  {question.optionExplanations.map((oe) => {
+                    const isOptCorrect = gradeResult.correctOptionIds.includes(oe.optionId);
+                    return (
+                      <div
+                        key={oe.optionId}
+                        className={`p-3.5 rounded-xl border ${
+                          isOptCorrect
+                            ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="font-mono text-xs font-bold mb-1.5">
+                          <span
+                            className={
+                              isOptCorrect
+                                ? 'text-emerald-700 dark:text-emerald-400'
+                                : 'text-rose-700 dark:text-rose-400'
+                            }
+                          >
+                            Phương án {oe.optionId.toUpperCase()} —{' '}
+                            {isOptCorrect ? '✓ ĐÁP ÁN ĐÚNG' : '✗ PHƯƠNG ÁN SAI'}
+                          </span>
+                        </div>
+                        <BlockRenderer blocks={oe.content} className="text-xs sm:text-sm" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

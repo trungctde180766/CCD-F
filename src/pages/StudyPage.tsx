@@ -9,11 +9,12 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { ALL_DERIVED_TAGS, QUESTIONS, QUESTIONS_BY_ID } from '../data/questionBank';
+import { type CourseBundle, getCourseBundle } from '../data/questionBank';
 import { AggregateStats, filterQuestions } from '../lib/stats';
-import { FILTER_LABELS } from '../lib/session';
+import { getFilterLabels } from '../lib/session';
 import type {
   AppProgressState,
+  CourseId,
   QuestionFilterType,
   StudySessionProgress,
 } from '../types';
@@ -21,6 +22,7 @@ import { QuestionCard } from '../components/QuestionCard';
 import { buildGridItemsForStudy, QuestionGridDrawer } from '../components/QuestionGridDrawer';
 
 interface StudyPageProps {
+  course: CourseBundle;
   state: AppProgressState;
   stats: AggregateStats;
   externalFilterOverride?: {
@@ -42,10 +44,16 @@ interface StudyPageProps {
   onSaveNote: (questionId: string, note: string) => void;
 }
 
-export function getDefaultStudyProgress(lastQuestionId?: string | null): StudySessionProgress {
+export function getDefaultStudyProgress(
+  lastQuestionId?: string | null,
+  courseId: CourseId = 'ccdv-f'
+): StudySessionProgress {
+  const course = getCourseBundle(courseId);
   return {
     currentQuestionId:
-      lastQuestionId && QUESTIONS_BY_ID[lastQuestionId] ? lastQuestionId : 'ccdv-f-q001',
+      lastQuestionId && course.questionsById[lastQuestionId]
+        ? lastQuestionId
+        : course.firstQuestionId,
     filterType: 'all',
     derivedTag: 'all',
     searchQuery: '',
@@ -56,6 +64,7 @@ export function getDefaultStudyProgress(lastQuestionId?: string | null): StudySe
 }
 
 export const StudyPage: React.FC<StudyPageProps> = ({
+  course,
   state,
   stats,
   externalFilterOverride,
@@ -67,9 +76,11 @@ export const StudyPage: React.FC<StudyPageProps> = ({
   onToggleBookmark,
   onSaveNote,
 }) => {
+  const filterLabels = useMemo(() => getFilterLabels(course), [course]);
+
   const studyProgress = useMemo(
-    () => state.studyProgress || getDefaultStudyProgress(state.lastStudiedQuestionId),
-    [state.studyProgress, state.lastStudiedQuestionId]
+    () => state.studyProgress || getDefaultStudyProgress(state.lastStudiedQuestionId, course.id),
+    [state.studyProgress, state.lastStudiedQuestionId, course.id]
   );
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
@@ -84,7 +95,7 @@ export const StudyPage: React.FC<StudyPageProps> = ({
       derivedTag: externalFilterOverride.tag ?? 'all',
       searchQuery: '',
       currentQuestionId:
-        externalFilterOverride.questionId && QUESTIONS_BY_ID[externalFilterOverride.questionId]
+        externalFilterOverride.questionId && course.questionsById[externalFilterOverride.questionId]
           ? externalFilterOverride.questionId
           : prev.currentQuestionId,
       updatedAt: new Date().toISOString(),
@@ -95,12 +106,12 @@ export const StudyPage: React.FC<StudyPageProps> = ({
 
   const filteredQuestions = useMemo(
     () =>
-      filterQuestions(QUESTIONS, stats, {
+      filterQuestions(course.questions, stats, {
         filterType,
         derivedTag,
         searchQuery,
       }),
-    [stats, filterType, derivedTag, searchQuery]
+    [course.questions, stats, filterType, derivedTag, searchQuery]
   );
 
   // Ensure currentQuestionId belongs to filteredQuestions when filter changes
@@ -117,7 +128,7 @@ export const StudyPage: React.FC<StudyPageProps> = ({
     }
   }, [filteredQuestions, currentQuestionId, onUpdateStudyProgress]);
 
-  const currentQuestion = QUESTIONS_BY_ID[currentQuestionId] || filteredQuestions[0] || null;
+  const currentQuestion = course.questionsById[currentQuestionId] || filteredQuestions[0] || null;
 
   // Record view (distinct from answering!) whenever currentQuestion changes
   useEffect(() => {
@@ -304,9 +315,9 @@ export const StudyPage: React.FC<StudyPageProps> = ({
               aria-label="Lọc theo trạng thái câu hỏi"
               className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              {(Object.keys(FILTER_LABELS) as QuestionFilterType[]).map((key) => (
+              {(Object.keys(filterLabels) as QuestionFilterType[]).map((key) => (
                 <option key={key} value={key}>
-                  {FILTER_LABELS[key]}
+                  {filterLabels[key]}
                 </option>
               ))}
             </select>
@@ -327,7 +338,7 @@ export const StudyPage: React.FC<StudyPageProps> = ({
               className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">Tất cả nhãn hỗ trợ học tập</option>
-              {ALL_DERIVED_TAGS.map((tag) => (
+              {course.derivedTags.map((tag) => (
                 <option key={tag} value={tag}>
                   Nhãn: {tag}
                 </option>
@@ -340,8 +351,9 @@ export const StudyPage: React.FC<StudyPageProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex flex-wrap items-center gap-2">
             <span>
-              Hiển thị <strong>{filteredQuestions.length}</strong> / 110 câu • Tự động lưu giai đoạn
-              hiện tại (đã chấm lượt này: <strong>{checkedInPassCount}</strong> câu)
+              Hiển thị <strong>{filteredQuestions.length}</strong> / {course.questions.length} câu •
+              Tự động lưu giai đoạn hiện tại (đã chấm lượt này:{' '}
+              <strong>{checkedInPassCount}</strong> câu)
             </span>
             {qMeta && qMeta.isAnswered && (
               <>
@@ -400,7 +412,8 @@ export const StudyPage: React.FC<StudyPageProps> = ({
             Không có câu hỏi nào khớp với bộ lọc hiện tại
           </p>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Hãy thử đổi bộ lọc trạng thái hoặc xóa từ khóa tìm kiếm để xem toàn bộ 110 câu hỏi.
+            Hãy thử đổi bộ lọc trạng thái hoặc xóa từ khóa tìm kiếm để xem toàn bộ{' '}
+            {course.questions.length} câu hỏi.
           </p>
           <button
             type="button"
@@ -415,7 +428,7 @@ export const StudyPage: React.FC<StudyPageProps> = ({
             }
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white hover:bg-brand-700"
           >
-            Đặt lại bộ lọc (Xem đủ 110 câu)
+            Đặt lại bộ lọc (Xem đủ {course.questions.length} câu)
           </button>
         </div>
       ) : (
@@ -517,8 +530,8 @@ export const StudyPage: React.FC<StudyPageProps> = ({
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                   Xóa sạch các lựa chọn đang làm dở trong lượt học này và quay về{' '}
-                  <code className="font-mono">ccdv-f-q001</code>. Vẫn giữ lại lịch sử thống kê và ghi
-                  chú cũ.
+                  <code className="font-mono">{course.firstQuestionId}</code>. Vẫn giữ lại lịch sử
+                  thống kê và ghi chú cũ.
                 </p>
               </button>
 
@@ -532,7 +545,7 @@ export const StudyPage: React.FC<StudyPageProps> = ({
               >
                 <div className="font-bold text-sm text-rose-800 dark:text-rose-200 flex items-center gap-2">
                   <Trash2 className="w-4 h-4" />
-                  <span>2. Reset toàn bộ tiến độ về 0 / 110 câu</span>
+                  <span>2. Reset toàn bộ tiến độ về 0 / {course.questions.length} câu</span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                   Xóa toàn bộ lịch sử trả lời, đề thi cũ và bắt đầu lại hoàn toàn như mới từ Câu 1.

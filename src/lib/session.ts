@@ -1,4 +1,4 @@
-import { QUESTIONS, QUESTIONS_BY_ID } from '../data/questionBank';
+import { ALL_QUESTIONS_BY_ID, type CourseBundle, QUESTIONS } from '../data/questionBank';
 import type {
   ActiveSession,
   Question,
@@ -7,19 +7,28 @@ import type {
 } from '../types';
 import { AggregateStats, filterQuestions } from './stats';
 
-export const FILTER_LABELS: Record<QuestionFilterType, string> = {
-  all: 'Toàn bộ ngân hàng (110 câu)',
-  unanswered: 'Chưa trả lời',
-  answered: 'Đã trả lời',
-  wrong_latest: 'Đang sai (lượt gần nhất)',
-  wrong_ever: 'Từng trả lời sai',
-  correct_latest: 'Đã trả lời đúng',
-  bookmarked: 'Câu đánh dấu',
-  due: 'Đến hạn ôn tập',
-  viewed_unanswered: 'Đã xem nhưng chưa làm',
-  multiple_choice: 'Câu chọn nhiều đáp án (8 câu)',
-  has_note: 'Có ghi chú cá nhân',
-};
+export function getFilterLabels(course?: CourseBundle): Record<QuestionFilterType, string> {
+  const total = course ? course.questions.length : QUESTIONS.length;
+  const multiCount = course
+    ? course.validation.multipleChoiceCount
+    : QUESTIONS.filter((q) => q.interaction.type === 'multiple_choice').length;
+
+  return {
+    all: `Toàn bộ ngân hàng (${total} câu)`,
+    unanswered: 'Chưa trả lời',
+    answered: 'Đã trả lời',
+    wrong_latest: 'Đang sai (lượt gần nhất)',
+    wrong_ever: 'Từng trả lời sai',
+    correct_latest: 'Đã trả lời đúng',
+    bookmarked: 'Câu đánh dấu',
+    due: 'Đến hạn ôn tập',
+    viewed_unanswered: 'Đã xem nhưng chưa làm',
+    multiple_choice: `Câu chọn nhiều đáp án (${multiCount} câu)`,
+    has_note: 'Có ghi chú cá nhân',
+  };
+}
+
+export const FILTER_LABELS: Record<QuestionFilterType, string> = getFilterLabels();
 
 /**
  * Shuffles an array of question IDs without mutating the original array.
@@ -40,9 +49,10 @@ export function shuffleQuestionIds(ids: readonly string[], randomFn: () => numbe
 export function getFilteredPool(
   stats: AggregateStats,
   filterType: QuestionFilterType,
-  derivedTag = 'all'
+  derivedTag = 'all',
+  questions: Question[] = QUESTIONS
 ): Question[] {
-  return filterQuestions(QUESTIONS, stats, {
+  return filterQuestions(questions, stats, {
     filterType,
     derivedTag,
   });
@@ -59,6 +69,8 @@ export interface CreateSessionParams {
   durationMinutes?: number | null;
   targetScorePercent?: number | null;
   customQuestionIds?: string[];
+  questions?: Question[];
+  course?: CourseBundle;
   now?: Date;
   randomFn?: () => number;
 }
@@ -79,11 +91,15 @@ export function createSessionFromPool(
   params: CreateSessionParams
 ): CreateSessionResult {
   const now = params.now ?? new Date();
+  const poolQuestions = params.questions ?? params.course?.questions ?? QUESTIONS;
+  const maxBankSize = Math.max(poolQuestions.length, 1);
+  const filterLabels = getFilterLabels(params.course);
+
   const baseIds = params.customQuestionIds
     ? Array.from(
-        new Set(params.customQuestionIds.filter((qId) => Boolean(QUESTIONS_BY_ID[qId])))
+        new Set(params.customQuestionIds.filter((qId) => Boolean(ALL_QUESTIONS_BY_ID[qId])))
       )
-    : getFilteredPool(stats, params.filterType, params.derivedTag).map((q) => q.id);
+    : getFilteredPool(stats, params.filterType, params.derivedTag, poolQuestions).map((q) => q.id);
 
   const availableCount = baseIds.length;
   if (availableCount === 0) {
@@ -95,7 +111,7 @@ export function createSessionFromPool(
     };
   }
 
-  const clampedRequested = Math.max(1, Math.min(110, Math.floor(params.requestedCount)));
+  const clampedRequested = Math.max(1, Math.min(maxBankSize, Math.floor(params.requestedCount)));
   const orderedIds = params.shuffleQuestions
     ? shuffleQuestionIds(baseIds, params.randomFn)
     : [...baseIds];
@@ -113,14 +129,14 @@ export function createSessionFromPool(
     params.mode === 'exam'
       ? `Thi thử (${usedCount} câu / ${durationMinutes} phút)`
       : params.mode === 'practice'
-      ? `Luyện tập (${usedCount} câu — ${FILTER_LABELS[params.filterType]})`
+      ? `Luyện tập (${usedCount} câu — ${filterLabels[params.filterType]})`
       : `Học từng câu`;
 
   const resolvedFilterLabel =
     params.filterLabel ||
     (params.customQuestionIds
       ? `Gói tự chọn (${usedCount} câu)`
-      : FILTER_LABELS[params.filterType] || params.filterType);
+      : filterLabels[params.filterType] || params.filterType);
 
   const session: ActiveSession = {
     id: `sess_${params.mode}_${now.getTime()}`,

@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  COURSES,
+  detectCourseIdFromQuestionId,
+  getCourseBundle,
+} from './data/questionBank';
+import {
   apiFetchMe,
   apiSendHeartbeat,
   apiSyncProgress,
@@ -8,12 +13,15 @@ import {
   saveStoredAuthSession,
 } from './lib/auth';
 import {
+  applyBackupImport,
   createInitialProgressState,
   deleteCustomExamPack,
   loadProgressState,
+  loadSelectedCourseId,
   markQuestionViewed,
   recordSingleQuestionAttempt,
   saveProgressState,
+  saveSelectedCourseId,
   StorageStatus,
   submitActiveSessionIdempotent,
   toggleQuestionBookmark,
@@ -26,6 +34,8 @@ import type {
   ActiveSession,
   AppProgressState,
   AuthUser,
+  BackupPayload,
+  CourseId,
   CustomExamPack,
   NavigationTab,
   QuestionFilterType,
@@ -40,6 +50,7 @@ import { getDefaultStudyProgress, StudyPage } from './pages/StudyPage';
 import { PracticePage } from './pages/PracticePage';
 import { ExamPage } from './pages/ExamPage';
 import { ReviewPage } from './pages/ReviewPage';
+import { LibraryBackupPage } from './pages/LibraryBackupPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 const THEME_STORAGE_KEY = 'ccdv_f_theme_dark';
@@ -50,6 +61,9 @@ export const App: React.FC = () => {
     user: AuthUser;
   } | null>(() => loadStoredAuthSession());
 
+  const [activeCourseId, setActiveCourseId] = useState<CourseId>(() => loadSelectedCourseId());
+  const activeCourse = useMemo(() => getCourseBundle(activeCourseId), [activeCourseId]);
+
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [cloudSynced, setCloudSynced] = useState<boolean>(false);
 
@@ -58,11 +72,12 @@ export const App: React.FC = () => {
   const [{ state, storageStatus }, setAppStore] = useState<{
     state: AppProgressState;
     storageStatus: StorageStatus;
-  }>(() => loadProgressState(loadStoredAuthSession()?.user?.username));
+  }>(() => loadProgressState(loadStoredAuthSession()?.user?.username, loadSelectedCourseId()));
 
   const [activeTab, setActiveTab] = useState<NavigationTab>(() => {
     const storedAuth = loadStoredAuthSession();
-    const loaded = loadProgressState(storedAuth?.user?.username).state;
+    const initialCourseId = loadSelectedCourseId();
+    const loaded = loadProgressState(storedAuth?.user?.username, initialCourseId).state;
     if (loaded.activeSession && loaded.activeSession.status === 'in_progress') {
       if (loaded.activeSession.mode === 'exam') return 'exam';
       if (loaded.activeSession.mode === 'practice') return 'practice';
@@ -105,7 +120,7 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // Verify auth session with server and reconcile cloud progress on mount
+  // Verify auth session with server and reconcile cloud progress for BOTH courses on mount
   useEffect(() => {
     if (!authSession?.token) return;
     let cancelled = false;
@@ -117,10 +132,25 @@ export const App: React.FC = () => {
           return;
         }
         setCloudSynced(Boolean(res.dbConnected));
-        if (res.progress) {
+        const byCourse: Record<string, unknown> = { ...(res.progressByCourse || {}) };
+        if (res.progress && !byCourse['ccdv-f']) {
+          byCourse['ccdv-f'] = res.progress;
+        }
+
+        // Reconcile every available course cleanly into its own course-scoped localStorage key
+        for (const c of COURSES) {
+          if (byCourse[c.id]) {
+            const localCourseState = loadProgressState(res.user.username, c.id).state;
+            const mergedCourse = reconcileUserProgress(localCourseState, byCourse[c.id], c.id);
+            saveProgressState(mergedCourse, res.user.username, c.id);
+          }
+        }
+
+        const activeServerProg = byCourse[activeCourseId];
+        if (activeServerProg) {
           setAppStore((current) => {
-            const merged = reconcileUserProgress(current.state, res.progress);
-            const saveRes = saveProgressState(merged, res.user!.username);
+            const merged = reconcileUserProgress(current.state, activeServerProg, activeCourseId);
+            const saveRes = saveProgressState(merged, res.user!.username, activeCourseId);
             return { state: merged, storageStatus: saveRes };
           });
         }
@@ -132,17 +162,18 @@ export const App: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [authSession?.token]);
+  }, [authSession?.token, activeCourseId]);
 
   const syncTimeoutRef = useRef<number | null>(null);
 
   // Build human-readable activity description for live admin telemetry
   const currentActivityDescription = useMemo(() => {
+    const prefix = `[${activeCourse.shortCode}] `;
     const sess = state.activeSession;
     if (activeTab === 'exam' && sess && sess.mode === 'exam' && sess.status === 'in_progress') {
       const idx = sess.questionOrder.indexOf(sess.currentQuestionId) + 1;
       const ans = Object.keys(sess.selections || {}).length;
-      return `Đang Thi thử: Câu ${idx}/${sess.questionOrder.length} (Đã chọn ${ans} câu)`;
+      return `${prefix}Đang Thi thử: Câu ${idx}/${sess.questionOrder.length} (Đã chọn ${ans} câu)`;
     }
     if (
       activeTab === 'practice' &&
@@ -151,17 +182,22 @@ export const App: React.FC = () => {
       sess.status === 'in_progress'
     ) {
       const idx = sess.questionOrder.indexOf(sess.currentQuestionId) + 1;
-      return `Đang Luyện tập: Câu ${idx}/${sess.questionOrder.length}`;
+      return `${prefix}Đang Luyện tập: Câu ${idx}/${sess.questionOrder.length}`;
     }
     if (activeTab === 'study') {
       const curQ =
-        state.studyProgress?.currentQuestionId || state.lastStudiedQuestionId || 'ccdv-f-q001';
-      return `Đang Học từng câu (${curQ})`;
+        state.studyProgress?.currentQuestionId ||
+        state.lastStudiedQuestionId ||
+        activeCourse.firstQuestionId;
+      return `${prefix}Đang Học từng câu (${curQ})`;
     }
-    if (activeTab === 'review') return 'Đang xem Lịch ôn & Câu sai';
+    if (activeTab === 'review') return `${prefix}Đang xem Lịch ôn & Câu sai`;
+    if (activeTab === 'library') return `${prefix}Đang xem Thư viện & Sao lưu`;
     if (activeTab === 'admin') return 'Đang mở Admin Dashboard';
-    return 'Đang xem Tổng quan';
+    return `${prefix}Đang xem Tổng quan`;
   }, [
+    activeCourse.shortCode,
+    activeCourse.firstQuestionId,
     activeTab,
     state.activeSession,
     state.studyProgress?.currentQuestionId,
@@ -219,7 +255,7 @@ export const App: React.FC = () => {
       setAppStore((current) => {
         const nextState = updater(current.state);
         if (nextState === current.state) return current;
-        const saveRes = saveProgressState(nextState, currentUsername);
+        const saveRes = saveProgressState(nextState, currentUsername, activeCourseId);
         scheduleCloudSync(nextState, authSession?.token || null);
         return {
           state: nextState,
@@ -227,7 +263,19 @@ export const App: React.FC = () => {
         };
       });
     },
-    [currentUsername, authSession?.token, scheduleCloudSync]
+    [currentUsername, activeCourseId, authSession?.token, scheduleCloudSync]
+  );
+
+  const handleSelectCourse = useCallback(
+    (nextCourseId: CourseId) => {
+      if (nextCourseId === activeCourseId) return;
+      saveSelectedCourseId(nextCourseId);
+      setActiveCourseId(nextCourseId);
+      setExternalStudyOverride(null);
+      const loaded = loadProgressState(currentUsername, nextCourseId);
+      setAppStore(loaded);
+    },
+    [activeCourseId, currentUsername]
   );
 
   const handleSelectTab = useCallback(
@@ -246,6 +294,7 @@ export const App: React.FC = () => {
       token: string;
       user: AuthUser;
       serverProgress: unknown;
+      serverProgressByCourse?: Record<string, unknown>;
       dbConnected: boolean;
     }) => {
       const nextAuth = { token: params.token, user: params.user };
@@ -253,38 +302,56 @@ export const App: React.FC = () => {
       setAuthSession(nextAuth);
       setCloudSynced(params.dbConnected);
 
-      // Load this user's isolated local state and reconcile with their MongoDB server progress
-      const userLocal = loadProgressState(params.user.username).state;
-      const merged = reconcileUserProgress(userLocal, params.serverProgress);
-      const saveRes = saveProgressState(merged, params.user.username);
-      setAppStore({ state: merged, storageStatus: saveRes });
+      const byCourse: Record<string, unknown> = { ...(params.serverProgressByCourse || {}) };
+      if (params.serverProgress && !byCourse['ccdv-f']) {
+        byCourse['ccdv-f'] = params.serverProgress;
+      }
 
-      // Sync merged progress back to server so MongoDB always has the latest snapshot
-      apiSyncProgress(params.token, merged).catch(() => {});
+      // Reconcile each course independently so Developer & Associate never overwrite each other
+      let activeMerged = loadProgressState(params.user.username, activeCourseId).state;
+      let activeSaveRes: StorageStatus = { available: true, error: null };
+
+      for (const c of COURSES) {
+        const userLocal = loadProgressState(params.user.username, c.id).state;
+        const merged = reconcileUserProgress(userLocal, byCourse[c.id], c.id);
+        const saveRes = saveProgressState(merged, params.user.username, c.id);
+        if (c.id === activeCourseId) {
+          activeMerged = merged;
+          activeSaveRes = saveRes;
+        }
+        if (merged.attempts.length > 0 || merged.sessionHistory.length > 0) {
+          apiSyncProgress(params.token, merged).catch(() => {});
+        }
+      }
+
+      setAppStore({ state: activeMerged, storageStatus: activeSaveRes });
 
       if (params.user.role === 'admin') {
         setActiveTab('admin');
-      } else if (merged.activeSession?.status === 'in_progress') {
-        setActiveTab(merged.activeSession.mode === 'exam' ? 'exam' : 'practice');
-      } else if (merged.lastActiveTab && merged.lastActiveTab !== 'admin') {
-        setActiveTab(merged.lastActiveTab);
+      } else if (activeMerged.activeSession?.status === 'in_progress') {
+        setActiveTab(activeMerged.activeSession.mode === 'exam' ? 'exam' : 'practice');
+      } else if (activeMerged.lastActiveTab && activeMerged.lastActiveTab !== 'admin') {
+        setActiveTab(activeMerged.lastActiveTab);
       } else {
         setActiveTab('overview');
       }
     },
-    []
+    [activeCourseId]
   );
 
   const handleLogout = useCallback(() => {
     saveStoredAuthSession(null);
     setAuthSession(null);
     setCloudSynced(false);
-    const guestLoaded = loadProgressState(null);
+    const guestLoaded = loadProgressState(null, activeCourseId);
     setAppStore(guestLoaded);
     setActiveTab('overview');
-  }, []);
+  }, [activeCourseId]);
 
-  const stats = useMemo(() => computeAggregateStats(state), [state]);
+  const stats = useMemo(
+    () => computeAggregateStats(state, new Date(), activeCourse.questions),
+    [state, activeCourse.questions]
+  );
 
   const handleMarkViewed = useCallback(
     (questionId: string) => {
@@ -310,7 +377,9 @@ export const App: React.FC = () => {
   const handleUpdateStudyProgress = useCallback(
     (updater: (prev: StudySessionProgress) => StudySessionProgress) => {
       updateStateAndPersist((prev) => {
-        const base = prev.studyProgress || getDefaultStudyProgress(prev.lastStudiedQuestionId);
+        const base =
+          prev.studyProgress ||
+          getDefaultStudyProgress(prev.lastStudiedQuestionId, activeCourseId);
         const nextStudy = updater(base);
         return {
           ...prev,
@@ -319,16 +388,17 @@ export const App: React.FC = () => {
         };
       });
     },
-    [updateStateAndPersist]
+    [updateStateAndPersist, activeCourseId]
   );
 
   const handleResetStudyPassOnly = useCallback(() => {
+    const firstId = activeCourse.firstQuestionId;
     updateStateAndPersist((prev) => ({
       ...prev,
-      studyProgress: getDefaultStudyProgress('ccdv-f-q001'),
-      lastStudiedQuestionId: 'ccdv-f-q001',
+      studyProgress: getDefaultStudyProgress(firstId, activeCourseId),
+      lastStudiedQuestionId: firstId,
     }));
-  }, [updateStateAndPersist]);
+  }, [updateStateAndPersist, activeCourse.firstQuestionId, activeCourseId]);
 
   const handleRecordStudyAttempt = useCallback(
     (params: {
@@ -486,10 +556,19 @@ export const App: React.FC = () => {
 
   const handleOpenStudyWithFilter = useCallback(
     (filter: QuestionFilterType, questionId?: string, tag = 'all') => {
+      if (questionId) {
+        const targetCourseId = detectCourseIdFromQuestionId(questionId);
+        if (targetCourseId !== activeCourseId) {
+          saveSelectedCourseId(targetCourseId);
+          setActiveCourseId(targetCourseId);
+          const loaded = loadProgressState(currentUsername, targetCourseId);
+          setAppStore(loaded);
+        }
+      }
       setExternalStudyOverride({ filter, questionId, tag, nonce: Date.now() });
-      handleSelectTab('study');
+      setActiveTab('study');
     },
-    [handleSelectTab]
+    [activeCourseId, currentUsername]
   );
 
   const handleResumeActiveSession = useCallback(() => {
@@ -510,21 +589,30 @@ export const App: React.FC = () => {
         filterType: filter,
         requestedCount: 30,
         shuffleQuestions: true,
+        questions: activeCourse.questions,
+        course: activeCourse,
       });
       if (res.session) {
         handleStartSession(res.session);
       }
     },
-    [stats, handleStartSession]
+    [stats, activeCourse, handleStartSession]
   );
 
   const handleResetAllProgress = useCallback(() => {
     updateStateAndPersist(() => ({
-      ...createInitialProgressState(),
-      studyProgress: getDefaultStudyProgress('ccdv-f-q001'),
+      ...createInitialProgressState(activeCourseId),
+      studyProgress: getDefaultStudyProgress(activeCourse.firstQuestionId, activeCourseId),
       lastActiveTab: activeTab,
     }));
-  }, [updateStateAndPersist, activeTab]);
+  }, [updateStateAndPersist, activeCourseId, activeCourse.firstQuestionId, activeTab]);
+
+  const handleImportBackup = useCallback(
+    (payload: BackupPayload, mode: 'merge' | 'replace') => {
+      updateStateAndPersist((prev) => applyBackupImport(prev, payload, mode));
+    },
+    [updateStateAndPersist]
+  );
 
   const handleSaveCustomPack = useCallback(
     (draft: CustomPackDraftInput): CustomExamPack | null => {
@@ -559,6 +647,9 @@ export const App: React.FC = () => {
 
   return (
     <Layout
+      activeCourse={activeCourse}
+      courses={COURSES}
+      onSelectCourse={handleSelectCourse}
       activeTab={activeTab}
       onSelectTab={handleSelectTab}
       darkMode={darkMode}
@@ -575,6 +666,9 @@ export const App: React.FC = () => {
     >
       {activeTab === 'overview' && (
         <OverviewPage
+          course={activeCourse}
+          courses={COURSES}
+          onSelectCourse={handleSelectCourse}
           state={state}
           stats={stats}
           onNavigateTab={handleSelectTab}
@@ -587,6 +681,8 @@ export const App: React.FC = () => {
 
       {activeTab === 'study' && (
         <StudyPage
+          key={activeCourse.id}
+          course={activeCourse}
           state={state}
           stats={stats}
           externalFilterOverride={externalStudyOverride}
@@ -602,6 +698,8 @@ export const App: React.FC = () => {
 
       {activeTab === 'practice' && (
         <PracticePage
+          key={activeCourse.id}
+          course={activeCourse}
           state={state}
           stats={stats}
           onStartSession={handleStartSession}
@@ -617,6 +715,8 @@ export const App: React.FC = () => {
 
       {activeTab === 'exam' && (
         <ExamPage
+          key={activeCourse.id}
+          course={activeCourse}
           state={state}
           stats={stats}
           onStartSession={handleStartSession}
@@ -635,12 +735,27 @@ export const App: React.FC = () => {
 
       {activeTab === 'review' && (
         <ReviewPage
+          key={activeCourse.id}
+          course={activeCourse}
           state={state}
           stats={stats}
           onOpenQuestionInStudy={(qId, filter = 'all') =>
             handleOpenStudyWithFilter(filter, qId)
           }
           onStartQuickPractice={handleStartQuickPracticeFromReview}
+        />
+      )}
+
+      {activeTab === 'library' && (
+        <LibraryBackupPage
+          key={activeCourse.id}
+          course={activeCourse}
+          state={state}
+          stats={stats}
+          storageStatus={storageStatus}
+          onImportBackup={handleImportBackup}
+          onResetCourseProgress={handleResetAllProgress}
+          onOpenQuestionInStudy={(qId) => handleOpenStudyWithFilter('all', qId)}
         />
       )}
 

@@ -20,12 +20,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import {
-  ALL_DERIVED_TAGS,
-  extractBlockText,
-  QUESTIONS,
-  QUESTIONS_BY_ID,
-} from '../data/questionBank';
+import { type CourseBundle, extractBlockText } from '../data/questionBank';
 import { QUESTIONS_VI } from '../lib/bilingualAndRationale';
 import type { AggregateStats } from '../lib/stats';
 import type { CustomExamPack } from '../types';
@@ -49,6 +44,7 @@ export interface CustomPackDraftInput {
 }
 
 interface CustomExamPackBuilderProps {
+  course: CourseBundle;
   packs: CustomExamPack[];
   stats: AggregateStats;
   bookmarks: Record<string, boolean>;
@@ -64,6 +60,7 @@ interface CustomExamPackBuilderProps {
 }
 
 export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
+  course,
   packs,
   stats,
   bookmarks,
@@ -71,6 +68,11 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
   onDeletePack,
   onStartExamFromPack,
 }) => {
+  const questions = course.questions;
+  const questionsById = course.questionsById;
+  const totalCount = questions.length;
+  const multiCount = course.validation.multipleChoiceCount;
+
   const [editingPackId, setEditingPackId] = useState<string | null>(null);
   const [packName, setPackName] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -90,7 +92,7 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const updateSelectedWithAutoDuration = (nextIds: string[]) => {
-    const ordered = QUESTIONS.filter((q) => nextIds.includes(q.id)).map((q) => q.id);
+    const ordered = questions.filter((q) => nextIds.includes(q.id)).map((q) => q.id);
     setSelectedIds(ordered);
     if (!durationTouched && ordered.length > 0) {
       setDurationMinutes(Math.max(5, Math.min(180, Math.ceil(ordered.length * 1.5))));
@@ -107,7 +109,7 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
   const filteredQuestions = useMemo(() => {
     const qLower = searchQuery.trim().toLowerCase();
 
-    return QUESTIONS.filter((q) => {
+    return questions.filter((q) => {
       const qStat = stats.perQuestion[q.id];
 
       if (quickFilter === 'selected' && !selectedSet.has(q.id)) return false;
@@ -148,7 +150,7 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
 
       return true;
     });
-  }, [searchQuery, quickFilter, selectedTag, selectedSet, stats.perQuestion, bookmarks]);
+  }, [questions, searchQuery, quickFilter, selectedTag, selectedSet, stats.perQuestion, bookmarks]);
 
   const handleSelectFiltered = () => {
     const merged = Array.from(new Set([...selectedIds, ...filteredQuestions.map((q) => q.id)]));
@@ -162,11 +164,11 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
   };
 
   const handleAddRange = () => {
-    const lo = Math.max(1, Math.min(QUESTIONS.length, Math.min(rangeStart, rangeEnd)));
-    const hi = Math.max(1, Math.min(QUESTIONS.length, Math.max(rangeStart, rangeEnd)));
-    const rangeIds = QUESTIONS.filter((q) => (q.number ?? 0) >= lo && (q.number ?? 0) <= hi).map(
-      (q) => q.id
-    );
+    const lo = Math.max(1, Math.min(totalCount, Math.min(rangeStart, rangeEnd)));
+    const hi = Math.max(1, Math.min(totalCount, Math.max(rangeStart, rangeEnd)));
+    const rangeIds = questions
+      .filter((q) => (q.number ?? 0) >= lo && (q.number ?? 0) <= hi)
+      .map((q) => q.id);
     const merged = Array.from(new Set([...selectedIds, ...rangeIds]));
     updateSelectedWithAutoDuration(merged);
   };
@@ -253,7 +255,7 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
 
   const formatQuestionPreviewNumbers = (ids: string[]) => {
     const nums = ids
-      .map((id) => QUESTIONS_BY_ID[id]?.number)
+      .map((id) => questionsById[id]?.number)
       .filter((n): n is number => typeof n === 'number')
       .sort((a, b) => a - b);
     if (nums.length <= 10) {
@@ -401,15 +403,15 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
                   : 'Chọn từng câu hỏi để tạo gói thi thử'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Bấm chọn nhanh trên lưới số 1–110 hoặc tìm kiếm &amp; tích từng câu bên dưới, sau đó lưu
-                thành gói đề hoặc vào thi thử ngay.
+                Bấm chọn nhanh trên lưới số 1–{totalCount} hoặc tìm kiếm &amp; tích từng câu bên dưới,
+                sau đó lưu thành gói đề hoặc vào thi thử ngay.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950/80 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
-              Đã chọn: {selectedIds.length} / {QUESTIONS.length} câu
+              Đã chọn: {selectedIds.length} / {totalCount} câu
             </span>
             {editingPackId && (
               <button
@@ -520,10 +522,10 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
                 type="number"
                 aria-label="Từ câu số"
                 min={1}
-                max={110}
+                max={totalCount}
                 value={rangeStart}
                 onChange={(e) =>
-                  setRangeStart(Math.max(1, Math.min(110, parseInt(e.target.value, 10) || 1)))
+                  setRangeStart(Math.max(1, Math.min(totalCount, parseInt(e.target.value, 10) || 1)))
                 }
                 className="w-16 py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-xs font-bold"
               />
@@ -532,10 +534,10 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
                 type="number"
                 aria-label="Đến câu số"
                 min={1}
-                max={110}
+                max={totalCount}
                 value={rangeEnd}
                 onChange={(e) =>
-                  setRangeEnd(Math.max(1, Math.min(110, parseInt(e.target.value, 10) || 1)))
+                  setRangeEnd(Math.max(1, Math.min(totalCount, parseInt(e.target.value, 10) || 1)))
                 }
                 className="w-16 py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-xs font-bold"
               />
@@ -555,14 +557,14 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100"
             >
               <Grid className="w-3.5 h-3.5" />
-              <span>{showNumberGrid ? 'Ẩn lưới số 1–110' : 'Hiện lưới số 1–110'}</span>
+              <span>{showNumberGrid ? `Ẩn lưới số 1–${totalCount}` : `Hiện lưới số 1–${totalCount}`}</span>
             </button>
           </div>
 
           {showNumberGrid && (
             <div className="space-y-2">
               <div className="grid grid-cols-10 sm:grid-cols-11 gap-1.5">
-                {QUESTIONS.map((q) => {
+                {questions.map((q) => {
                   const isPicked = selectedSet.has(q.id);
                   const qStat = stats.perQuestion[q.id];
                   const isWrong = Boolean(qStat?.isCurrentlyWrong);
@@ -632,7 +634,7 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
               className="py-2 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm"
             >
               <option value="all">Tất cả chủ đề</option>
-              {ALL_DERIVED_TAGS.map((tag) => (
+              {course.derivedTags.map((tag) => (
                 <option key={tag} value={tag}>
                   {tag}
                 </option>
@@ -645,13 +647,13 @@ export const CustomExamPackBuilder: React.FC<CustomExamPackBuilderProps> = ({
             <div className="flex flex-wrap items-center gap-1.5">
               {(
                 [
-                  { id: 'all', label: `Tất cả (${QUESTIONS.length})` },
+                  { id: 'all', label: `Tất cả (${totalCount})` },
                   { id: 'selected', label: `Đã chọn (${selectedIds.length})` },
                   { id: 'unanswered', label: `Chưa làm (${stats.unansweredCount})` },
                   { id: 'wrong_latest', label: `Đang sai (${stats.wrongLatestCount})` },
                   { id: 'wrong_ever', label: `Từng sai (${stats.everWrongCount})` },
                   { id: 'bookmarked', label: `Đánh dấu (${stats.bookmarkedCount})` },
-                  { id: 'multiple_choice', label: 'Chọn nhiều (8)' },
+                  { id: 'multiple_choice', label: `Chọn nhiều (${multiCount})` },
                 ] as Array<{ id: PickerQuickFilter; label: string }>
               ).map((chip) => (
                 <button

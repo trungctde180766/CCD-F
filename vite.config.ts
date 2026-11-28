@@ -34,6 +34,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('associate/questions.json') || id.includes('associate\\questions.json')) {
+            return 'question-bank-associate';
+          }
           if (id.includes('questions.vi.json')) {
             return 'question-bank-vi';
           }

@@ -15,7 +15,7 @@ import {
   Timer,
   XCircle,
 } from 'lucide-react';
-import { QUESTIONS_BY_ID } from '../data/questionBank';
+import type { CourseBundle } from '../data/questionBank';
 import {
   createSessionFromPool,
   formatCountdown,
@@ -37,6 +37,7 @@ import { QuestionCard } from '../components/QuestionCard';
 import { QuestionGridDrawer, QuestionGridItem } from '../components/QuestionGridDrawer';
 
 interface ExamPageProps {
+  course: CourseBundle;
   state: AppProgressState;
   stats: AggregateStats;
   onStartSession: (session: ActiveSession) => void;
@@ -53,6 +54,7 @@ interface ExamPageProps {
 }
 
 export const ExamPage: React.FC<ExamPageProps> = ({
+  course,
   state,
   stats,
   onStartSession,
@@ -67,6 +69,7 @@ export const ExamPage: React.FC<ExamPageProps> = ({
   onSaveCustomPack,
   onDeleteCustomPack,
 }) => {
+  const maxBankSize = course.questions.length;
   const [configTab, setConfigTab] = useState<'auto' | 'custom'>('auto');
   const [filterType, setFilterType] = useState<QuestionFilterType>('all');
   const [questionCount, setQuestionCount] = useState<number>(30);
@@ -122,8 +125,8 @@ export const ExamPage: React.FC<ExamPageProps> = ({
   }, [activeExamSession?.id, activeExamSession?.status, activeExamSession?.deadline, onSubmitExam]);
 
   const availablePool = useMemo(
-    () => getFilteredPool(stats, filterType, 'all'),
-    [stats, filterType]
+    () => getFilteredPool(stats, filterType, 'all', course.questions),
+    [stats, filterType, course.questions]
   );
 
   const availableCount = availablePool.length;
@@ -138,6 +141,8 @@ export const ExamPage: React.FC<ExamPageProps> = ({
       shuffleQuestions,
       durationMinutes,
       targetScorePercent,
+      questions: course.questions,
+      course,
     });
     if (res.session) {
       autoSubmitTriggeredRef.current = null;
@@ -162,6 +167,8 @@ export const ExamPage: React.FC<ExamPageProps> = ({
       shuffleQuestions: params.shuffleQuestions,
       durationMinutes: params.durationMinutes,
       targetScorePercent: params.targetScorePercent,
+      questions: course.questions,
+      course,
     });
     if (res.session) {
       autoSubmitTriggeredRef.current = null;
@@ -172,7 +179,7 @@ export const ExamPage: React.FC<ExamPageProps> = ({
   if (activeExamSession) {
     const order = activeExamSession.questionOrder;
     const currentQId = activeExamSession.currentQuestionId || order[0];
-    const currentQuestion = QUESTIONS_BY_ID[currentQId];
+    const currentQuestion = course.questionsById[currentQId];
     const currentIndex = order.indexOf(currentQId);
 
     const answeredCount = order.filter(
@@ -565,6 +572,7 @@ export const ExamPage: React.FC<ExamPageProps> = ({
 
       {configTab === 'custom' ? (
         <CustomExamPackBuilder
+          course={course}
           packs={customPacks}
           stats={stats}
           bookmarks={state.bookmarks}
@@ -615,21 +623,23 @@ export const ExamPage: React.FC<ExamPageProps> = ({
                 htmlFor="exam-count-input"
                 className="block text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200"
               >
-                Số lượng câu hỏi (1 – 110)
+                Số lượng câu hỏi (1 – {maxBankSize})
               </label>
               <input
                 id="exam-count-input"
                 type="number"
                 min={1}
-                max={110}
+                max={maxBankSize}
                 value={questionCount}
                 onChange={(e) =>
-                  setQuestionCount(Math.max(1, Math.min(110, parseInt(e.target.value, 10) || 1)))
+                  setQuestionCount(
+                    Math.max(1, Math.min(maxBankSize, parseInt(e.target.value, 10) || 1))
+                  )
                 }
                 className="w-full py-2.5 px-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono font-bold"
               />
               <div className="flex gap-1.5 pt-1">
-                {[30, 50, 60, 110].map((preset) => (
+                {[30, 50, 60, maxBankSize].map((preset) => (
                   <button
                     key={preset}
                     type="button"

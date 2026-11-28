@@ -34,8 +34,10 @@ describe('Full Application UI End-to-End Flow (Mandatory Auth Gate + Persistent 
 
     const { unmount } = render(<App />);
 
-    // Library tab should no longer exist
-    expect(screen.queryByRole('button', { name: /Thư viện & Sao lưu/i })).not.toBeInTheDocument();
+    // Dual-course switcher and Library & Backup tab should be available
+    expect(screen.getByRole('button', { name: /Developer \(CCDV-F\) \(110c\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Associate \(CCAO-F\) \(169c\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Thư viện & Sao lưu/i })).toBeInTheDocument();
 
     // Navigate to Study Mode ("Học từng câu")
     fireEvent.click(screen.getByRole('button', { name: /Học từng câu/i }));

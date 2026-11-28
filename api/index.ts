@@ -91,6 +91,7 @@ export interface UserDocument {
 export interface UserProgressDocument {
   username: string;
   progress: Record<string, unknown>;
+  progressByCourse?: Record<string, Record<string, unknown>>;
   updatedAt: string;
 }
 
@@ -418,17 +419,42 @@ async function saveUser(db: Db | null, user: UserDocument): Promise<void> {
   }
 }
 
-async function getUserProgress(db: Db | null, username: string): Promise<Record<string, unknown> | null> {
+async function getUserProgressDoc(
+  db: Db | null,
+  username: string
+): Promise<UserProgressDocument | null> {
   const clean = username.trim().toLowerCase();
   if (db) {
     const doc = await db.collection<UserProgressDocument>('user_progress').findOne({ username: clean });
     if (doc) {
       g.__ccdvMemoryProgress!.set(clean, doc);
-      return doc.progress;
+      return doc;
     }
     return null;
   }
-  return g.__ccdvMemoryProgress!.get(clean)?.progress || null;
+  return g.__ccdvMemoryProgress!.get(clean) || null;
+}
+
+function extractProgressByCourse(
+  doc: UserProgressDocument | null
+): Record<string, Record<string, unknown>> {
+  if (!doc) return {};
+  const map: Record<string, Record<string, unknown>> = {};
+  if (doc.progress && typeof doc.progress === 'object') {
+    const legacyId =
+      typeof doc.progress.courseId === 'string' && doc.progress.courseId.trim()
+        ? doc.progress.courseId.trim()
+        : 'ccdv-f';
+    map[legacyId] = doc.progress;
+  }
+  if (doc.progressByCourse && typeof doc.progressByCourse === 'object') {
+    for (const [cid, val] of Object.entries(doc.progressByCourse)) {
+      if (val && typeof val === 'object') {
+        map[cid] = val;
+      }
+    }
+  }
+  return map;
 }
 
 async function saveUserProgress(
@@ -438,12 +464,30 @@ async function saveUserProgress(
 ): Promise<string> {
   const clean = username.trim().toLowerCase();
   const updatedAt = new Date().toISOString();
+  const courseId =
+    typeof progress.courseId === 'string' && progress.courseId.trim()
+      ? progress.courseId.trim()
+      : 'ccdv-f';
+
+  const existingDoc = await getUserProgressDoc(db, clean);
+  const existingByCourse = extractProgressByCourse(existingDoc);
+
+  const nextCourseProgress = {
+    ...progress,
+    courseId,
+    updatedAt,
+  };
+  const nextByCourse: Record<string, Record<string, unknown>> = {
+    ...existingByCourse,
+    [courseId]: nextCourseProgress,
+  };
+
+  const primaryProgress = nextByCourse['ccdv-f'] || nextCourseProgress;
+
   const doc: UserProgressDocument = {
     username: clean,
-    progress: {
-      ...progress,
-      updatedAt,
-    },
+    progress: primaryProgress,
+    progressByCourse: nextByCourse,
     updatedAt,
   };
   g.__ccdvMemoryProgress!.set(clean, doc);
@@ -607,7 +651,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       await saveUser(db, user);
     }
 
-    const progress = await getUserProgress(db, user.username);
+    const progressDoc = await getUserProgressDoc(db, user.username);
+    const progressByCourse = extractProgressByCourse(progressDoc);
+    const progress = progressDoc?.progress || null;
     const token = signToken({
       username: user.username,
       displayName: user.displayName,
@@ -625,6 +671,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         lastLoginAt: user.lastLoginAt,
       },
       progress,
+      progressByCourse,
       dbConnected,
       dbError,
     });
@@ -727,7 +774,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     user.ipHistory = appendIpHistory(user.ipHistory, telemetry);
     await saveUser(db, user);
 
-    const progress = await getUserProgress(db, user.username);
+    const progressDoc = await getUserProgressDoc(db, user.username);
+    const progressByCourse = extractProgressByCourse(progressDoc);
+    const progress = progressDoc?.progress || null;
     return sendJson(res, 200, {
       ok: true,
       user: {
@@ -738,6 +787,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         lastLoginAt: user.lastLoginAt,
       },
       progress,
+      progressByCourse,
       dbConnected,
       dbError,
     });
@@ -775,10 +825,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (method === 'GET') {
-      const progress = await getUserProgress(db, tokenPayload.username);
+      const progressDoc = await getUserProgressDoc(db, tokenPayload.username);
+      const progressByCourse = extractProgressByCourse(progressDoc);
       return sendJson(res, 200, {
         ok: true,
-        progress,
+        progress: progressDoc?.progress || null,
+        progressByCourse,
         dbConnected,
         dbError,
       });
@@ -837,35 +889,58 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       allProgressDocs = Array.from(g.__ccdvMemoryProgress!.values());
     }
 
-    const progressByUser = new Map<string, Record<string, unknown>>();
+    const progressDocByUser = new Map<string, UserProgressDocument>();
     for (const doc of allProgressDocs) {
-      progressByUser.set(doc.username, doc.progress || {});
+      progressDocByUser.set(doc.username, doc);
     }
 
     const nowMs = Date.now();
 
     const usersReport = allUsers.map((u) => {
-      const prog = progressByUser.get(u.username) || {};
-      const attempts = Array.isArray(prog.attempts) ? prog.attempts : [];
-      const viewedQuestions =
-        prog.viewedQuestions && typeof prog.viewedQuestions === 'object'
-          ? Object.keys(prog.viewedQuestions)
-          : [];
-      const bookmarks =
-        prog.bookmarks && typeof prog.bookmarks === 'object'
-          ? Object.keys(prog.bookmarks).filter((k) => (prog.bookmarks as Record<string, boolean>)[k])
-          : [];
-      const notes =
-        prog.notes && typeof prog.notes === 'object'
-          ? Object.keys(prog.notes).filter((k) =>
-              String((prog.notes as Record<string, string>)[k] || '').trim()
-            )
-          : [];
-      const sessionHistory = Array.isArray(prog.sessionHistory) ? prog.sessionHistory : [];
-      const activeSession =
-        prog.activeSession && typeof prog.activeSession === 'object' ? prog.activeSession : null;
+      const doc = progressDocByUser.get(u.username) || null;
+      const byCourse = extractProgressByCourse(doc);
+      const courseStates = Object.values(byCourse);
+      const attempts: unknown[] = [];
+      const viewedKeys = new Set<string>();
+      const bookmarkKeys = new Set<string>();
+      const noteKeys = new Set<string>();
+      const sessionHistory: unknown[] = [];
+      let activeSession: Record<string, unknown> | null = null;
+      let latestUpdatedAt = '';
 
-      const lastSeenIso = u.telemetry?.lastSeenAt || (typeof prog.updatedAt === 'string' ? prog.updatedAt : u.lastLoginAt);
+      for (const prog of courseStates) {
+        if (Array.isArray(prog.attempts)) attempts.push(...prog.attempts);
+        if (prog.viewedQuestions && typeof prog.viewedQuestions === 'object') {
+          for (const k of Object.keys(prog.viewedQuestions)) viewedKeys.add(k);
+        }
+        if (prog.bookmarks && typeof prog.bookmarks === 'object') {
+          for (const [k, v] of Object.entries(prog.bookmarks as Record<string, boolean>)) {
+            if (v) bookmarkKeys.add(k);
+          }
+        }
+        if (prog.notes && typeof prog.notes === 'object') {
+          for (const [k, v] of Object.entries(prog.notes as Record<string, string>)) {
+            if (String(v || '').trim()) noteKeys.add(k);
+          }
+        }
+        if (Array.isArray(prog.sessionHistory)) sessionHistory.push(...prog.sessionHistory);
+        if (
+          prog.activeSession &&
+          typeof prog.activeSession === 'object' &&
+          (prog.activeSession as { status?: string }).status === 'in_progress'
+        ) {
+          activeSession = prog.activeSession as Record<string, unknown>;
+        }
+        if (typeof prog.updatedAt === 'string' && prog.updatedAt > latestUpdatedAt) {
+          latestUpdatedAt = prog.updatedAt;
+        }
+      }
+
+      const viewedQuestions = Array.from(viewedKeys);
+      const bookmarks = Array.from(bookmarkKeys);
+      const notes = Array.from(noteKeys);
+
+      const lastSeenIso = u.telemetry?.lastSeenAt || latestUpdatedAt || u.lastLoginAt;
       const diffSeconds = Math.max(0, Math.floor((nowMs - new Date(lastSeenIso).getTime()) / 1000));
       const isOnline = diffSeconds <= 45;
       const isRecentlyActive = diffSeconds <= 300;

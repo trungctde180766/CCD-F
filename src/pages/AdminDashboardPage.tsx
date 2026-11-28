@@ -24,7 +24,11 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { extractBlockText, QUESTIONS, QUESTIONS_BY_ID } from '../data/questionBank';
+import {
+  ALL_QUESTIONS as QUESTIONS,
+  ALL_QUESTIONS_BY_ID as QUESTIONS_BY_ID,
+  extractBlockText,
+} from '../data/questionBank';
 import {
   AdminOverviewResponse,
   apiAdminManageUser,

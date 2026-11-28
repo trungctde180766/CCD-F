@@ -18,6 +18,7 @@ interface AuthModalProps {
     token: string;
     user: AuthUser;
     serverProgress: unknown;
+    serverProgressByCourse?: Record<string, unknown>;
     dbConnected: boolean;
   }) => void;
   currentGuestProgress?: AppProgressState;

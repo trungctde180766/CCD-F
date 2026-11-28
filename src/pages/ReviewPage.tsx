@@ -11,12 +11,13 @@ import {
   RotateCcw,
   XCircle,
 } from 'lucide-react';
-import { extractBlockText, QUESTIONS, QUESTIONS_BY_ID } from '../data/questionBank';
+import { type CourseBundle, extractBlockText } from '../data/questionBank';
 import { getHoChiMinhDateString, SRS_INTERVAL_STEPS, SRS_TIMEZONE } from '../lib/srs';
 import type { AggregateStats } from '../lib/stats';
 import type { AppProgressState, QuestionFilterType } from '../types';
 
 interface ReviewPageProps {
+  course: CourseBundle;
   state: AppProgressState;
   stats: AggregateStats;
   onOpenQuestionInStudy: (questionId: string, filter?: QuestionFilterType) => void;
@@ -26,6 +27,7 @@ interface ReviewPageProps {
 type ReviewTab = 'due' | 'wrong_latest' | 'wrong_ever' | 'history';
 
 export const ReviewPage: React.FC<ReviewPageProps> = ({
+  course,
   state,
   stats,
   onOpenQuestionInStudy,
@@ -35,18 +37,18 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
   const todayHCM = getHoChiMinhDateString();
 
   const dueQuestions = useMemo(
-    () => QUESTIONS.filter((q) => stats.perQuestion[q.id]?.isDueForReview),
-    [stats]
+    () => course.questions.filter((q) => stats.perQuestion[q.id]?.isDueForReview),
+    [course.questions, stats]
   );
 
   const wrongLatestQuestions = useMemo(
-    () => QUESTIONS.filter((q) => stats.perQuestion[q.id]?.isCurrentlyWrong),
-    [stats]
+    () => course.questions.filter((q) => stats.perQuestion[q.id]?.isCurrentlyWrong),
+    [course.questions, stats]
   );
 
   const everWrongQuestions = useMemo(
-    () => QUESTIONS.filter((q) => stats.perQuestion[q.id]?.wasEverWrong),
-    [stats]
+    () => course.questions.filter((q) => stats.perQuestion[q.id]?.wasEverWrong),
+    [course.questions, stats]
   );
 
   const reversedAttempts = useMemo(

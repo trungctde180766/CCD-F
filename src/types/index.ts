@@ -1,3 +1,5 @@
+export type CourseId = 'ccdv-f' | 'ccao-f';
+
 export interface ParagraphBlock {
   type: 'paragraph';
   text: string;
@@ -15,7 +17,14 @@ export interface ListBlock {
   items: string[];
 }
 
-export type ContentBlock = ParagraphBlock | HeadingBlock | ListBlock;
+export interface CalloutBlock {
+  type: 'callout';
+  tone?: 'warning' | 'info' | string;
+  title?: string;
+  text: string;
+}
+
+export type ContentBlock = ParagraphBlock | HeadingBlock | ListBlock | CalloutBlock;
 
 export interface QuestionOption {
   id: string;
@@ -267,6 +276,7 @@ export type NavigationTab =
   | 'practice'
   | 'exam'
   | 'review'
+  | 'library'
   | 'admin';
 
 export interface AuthUser {

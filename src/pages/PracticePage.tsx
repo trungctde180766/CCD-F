@@ -9,12 +9,8 @@ import {
   Shuffle,
   Target,
 } from 'lucide-react';
-import { ALL_DERIVED_TAGS, QUESTIONS_BY_ID } from '../data/questionBank';
-import {
-  createSessionFromPool,
-  FILTER_LABELS,
-  getFilteredPool,
-} from '../lib/session';
+import type { CourseBundle } from '../data/questionBank';
+import { createSessionFromPool, getFilteredPool } from '../lib/session';
 import type { AggregateStats } from '../lib/stats';
 import type {
   ActiveSession,
@@ -25,6 +21,7 @@ import { QuestionCard } from '../components/QuestionCard';
 import { QuestionGridDrawer, QuestionGridItem } from '../components/QuestionGridDrawer';
 
 interface PracticePageProps {
+  course: CourseBundle;
   state: AppProgressState;
   stats: AggregateStats;
   onStartSession: (session: ActiveSession) => void;
@@ -37,9 +34,8 @@ interface PracticePageProps {
   onSaveNote: (questionId: string, note: string) => void;
 }
 
-const PRESET_COUNTS = [10, 20, 30, 50, 110] as const;
-
 export const PracticePage: React.FC<PracticePageProps> = ({
+  course,
   state,
   stats,
   onStartSession,
@@ -51,6 +47,8 @@ export const PracticePage: React.FC<PracticePageProps> = ({
   onToggleBookmark,
   onSaveNote,
 }) => {
+  const maxBankSize = course.questions.length;
+  const presetCounts = [10, 20, 30, 50, maxBankSize];
   const [filterType, setFilterType] = useState<QuestionFilterType>('all');
   const [derivedTag, setDerivedTag] = useState<string>('all');
   const [requestedCount, setRequestedCount] = useState<number>(20);
@@ -64,8 +62,8 @@ export const PracticePage: React.FC<PracticePageProps> = ({
       : null;
 
   const availablePool = useMemo(
-    () => getFilteredPool(stats, filterType, derivedTag),
-    [stats, filterType, derivedTag]
+    () => getFilteredPool(stats, filterType, derivedTag, course.questions),
+    [stats, filterType, derivedTag, course.questions]
   );
 
   const availableCount = availablePool.length;
@@ -76,7 +74,7 @@ export const PracticePage: React.FC<PracticePageProps> = ({
     setCustomCountInput(val);
     const num = parseInt(val, 10);
     if (!Number.isNaN(num)) {
-      setRequestedCount(Math.max(1, Math.min(110, num)));
+      setRequestedCount(Math.max(1, Math.min(maxBankSize, num)));
     }
   };
 
@@ -88,6 +86,8 @@ export const PracticePage: React.FC<PracticePageProps> = ({
       derivedTag,
       requestedCount,
       shuffleQuestions,
+      questions: course.questions,
+      course,
     });
     if (res.session) {
       onStartSession(res.session);
@@ -98,7 +98,7 @@ export const PracticePage: React.FC<PracticePageProps> = ({
   if (activePracticeSession) {
     const order = activePracticeSession.questionOrder;
     const currentQId = activePracticeSession.currentQuestionId || order[0];
-    const currentQuestion = QUESTIONS_BY_ID[currentQId];
+    const currentQuestion = course.questionsById[currentQId];
     const currentIndex = order.indexOf(currentQId);
     const checkedMap = activePracticeSession.checkedQuestions;
     const checkedCount = Object.keys(checkedMap).length;
@@ -279,8 +279,8 @@ export const PracticePage: React.FC<PracticePageProps> = ({
               Cấu hình phiên Luyện tập
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Chọn tập câu hỏi nguồn, số lượng câu từ 1 đến 110 và tùy chọn đảo thứ tự câu. Hiển thị
-              đúng/sai và lời giải ngay sau khi kiểm tra từng câu.
+              Chọn tập câu hỏi nguồn, số lượng câu từ 1 đến {maxBankSize} và tùy chọn đảo thứ tự câu.
+              Hiển thị đúng/sai và lời giải ngay sau khi kiểm tra từng câu.
             </p>
           </div>
         </div>
@@ -309,7 +309,8 @@ export const PracticePage: React.FC<PracticePageProps> = ({
               <option value="bookmarked">Câu đã đánh dấu ({stats.bookmarkedCount} câu)</option>
               <option value="due">Câu đến hạn ôn tập ({stats.dueForReviewCount} câu)</option>
               <option value="multiple_choice">
-                Nhóm câu chọn nhiều đáp án (8 câu multiple_choice)
+                Nhóm câu chọn nhiều đáp án ({course.validation.multipleChoiceCount} câu
+                multiple_choice)
               </option>
             </select>
           </div>
@@ -329,7 +330,7 @@ export const PracticePage: React.FC<PracticePageProps> = ({
               className="w-full py-2.5 px-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">Tất cả các mảng chủ đề</option>
-              {ALL_DERIVED_TAGS.map((tag) => (
+              {course.derivedTags.map((tag) => (
                 <option key={tag} value={tag}>
                   {tag}
                 </option>
@@ -343,10 +344,10 @@ export const PracticePage: React.FC<PracticePageProps> = ({
               htmlFor="practice-count-input"
               className="block text-sm font-semibold text-slate-800 dark:text-slate-200"
             >
-              3. Số lượng câu hỏi (1 – 110)
+              3. Số lượng câu hỏi (1 – {maxBankSize})
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              {PRESET_COUNTS.map((cnt) => (
+              {presetCounts.map((cnt) => (
                 <button
                   key={cnt}
                   type="button"
@@ -360,7 +361,7 @@ export const PracticePage: React.FC<PracticePageProps> = ({
                       : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  {cnt === 110 ? 'Toàn bộ (110)' : `${cnt} câu`}
+                  {cnt === maxBankSize ? `Toàn bộ (${maxBankSize})` : `${cnt} câu`}
                 </button>
               ))}
               <div className="flex items-center gap-2 ml-auto">
@@ -369,7 +370,7 @@ export const PracticePage: React.FC<PracticePageProps> = ({
                   id="practice-count-input"
                   type="number"
                   min={1}
-                  max={110}
+                  max={maxBankSize}
                   value={customCountInput}
                   onChange={(e) => handleCountChange(e.target.value)}
                   className="w-20 py-2 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono font-bold text-center"

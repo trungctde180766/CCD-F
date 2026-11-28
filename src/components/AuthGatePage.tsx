@@ -26,6 +26,7 @@ interface AuthGatePageProps {
     token: string;
     user: AuthUser;
     serverProgress: unknown;
+    serverProgressByCourse?: Record<string, unknown>;
     dbConnected: boolean;
   }) => void;
 }
@@ -63,6 +64,7 @@ export const AuthGatePage: React.FC<AuthGatePageProps> = ({
           token: res.token,
           user: res.user,
           serverProgress: res.progress,
+          serverProgressByCourse: res.progressByCourse,
           dbConnected: Boolean(res.dbConnected),
         });
       } else {
@@ -80,6 +82,7 @@ export const AuthGatePage: React.FC<AuthGatePageProps> = ({
           token: res.token,
           user: res.user,
           serverProgress: res.progress,
+          serverProgressByCourse: res.progressByCourse,
           dbConnected: Boolean(res.dbConnected),
         });
       }
@@ -101,10 +104,10 @@ export const AuthGatePage: React.FC<AuthGatePageProps> = ({
             </div>
             <div>
               <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
-                Claude Certified Developer – Foundations
+                Claude Certified Foundations — Developer &amp; Associate
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Hệ thống Tự học & Luyện thi Trực tuyến (CCDV-F)
+                Hệ thống Tự học &amp; Luyện thi Trực tuyến (CCDV-F 110 câu • CCAO-F 169 câu)
               </p>
             </div>
           </div>

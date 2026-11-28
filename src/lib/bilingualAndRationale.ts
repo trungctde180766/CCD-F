@@ -21,6 +21,10 @@ export interface QuestionVietnameseTranslation {
 export const QUESTIONS_VI: Record<string, QuestionVietnameseTranslation> =
   questionsViJson as Record<string, QuestionVietnameseTranslation>;
 
+export function hasVietnameseTranslation(questionId: string): boolean {
+  return Boolean(QUESTIONS_VI[questionId]);
+}
+
 const LANG_MODE_STORAGE_KEY = 'ccdv_f_lang_mode_v1';
 
 export function loadLanguageDisplayMode(): LanguageDisplayMode {
@@ -237,6 +241,18 @@ export function getExamSmartHint(question: Question): SmartExamHint {
   } else if (tags.includes('Claude Code & CLI')) {
     guidingPrincipleVi =
       'Nguyên tắc Claude Code: Chú ý thứ tự ưu tiên cấu hình (Managed/Enterprise > CLI args > `.claude/settings.local.json` > `.claude/settings.json` > `~/.claude/settings.json`), cơ chế gộp quyền (`deny` luôn thắng `allow`), và cơ chế fallback model khi `--resume` gặp model đã ngừng hoạt động.';
+  } else if (tags.includes('Output Verification & Evaluation')) {
+    guidingPrincipleVi =
+      'Nguyên tắc Kiểm chứng Đầu ra (Associate): Luôn đối chiếu số liệu, trích dẫn và khẳng định của Claude với tài liệu nguồn gốc; ưu tiên sửa sai tận gốc thay vì chỉ gắn disclaimer chung chung.';
+  } else if (tags.includes('Data Handling & Privacy') || tags.includes('Responsible Use & Governance')) {
+    guidingPrincipleVi =
+      'Nguyên tắc Dữ liệu & Sử dụng có trách nhiệm (Associate): Bảo vệ thông tin mật/PII trước khi chia sẻ, giữ con người kiểm duyệt (human-in-the-loop) cho quyết định rủi ro cao, và tuân thủ chính sách tổ chức trước khi tự động hóa.';
+  } else if (tags.includes('Projects & Context Management') || tags.includes('Skills, Connectors & Artifacts')) {
+    guidingPrincipleVi =
+      'Nguyên tắc Projects / Skills / Connectors (Associate): Dùng Projects để giữ tri thức & chỉ dẫn dùng chung ổn định; dùng Skills cho quy trình tái sử dụng; dùng Connectors khi cần kết nối dữ liệu sống từ công cụ ngoài; tách rõ tài liệu nguồn bằng cấu trúc rõ ràng.';
+  } else if (tags.includes('Code Execution & Data Analysis')) {
+    guidingPrincipleVi =
+      'Nguyên tắc Code Execution & Phân tích dữ liệu (Associate): Ưu tiên chạy mã tính toán xác thực (thay vì ước lượng bằng chữ) cho bảng tính/CSV/biểu đồ và kiểm tra lại công thức, đơn vị cũng như giả định đầu vào.';
   }
 
   return {

@@ -2,6 +2,7 @@ import type {
   AdminLearnerReport,
   AppProgressState,
   AuthUser,
+  CourseId,
 } from '../types';
 import {
   applyBackupImport,
@@ -52,12 +53,20 @@ export function saveStoredAuthSession(session: StoredAuthSession | null): void {
  */
 export function reconcileUserProgress(
   localUserState: AppProgressState,
-  serverRawProgress: unknown
+  serverRawProgress: unknown,
+  courseId?: CourseId
 ): AppProgressState {
   if (!serverRawProgress || typeof serverRawProgress !== 'object') {
     return localUserState;
   }
-  const serverState = sanitizeProgressState(serverRawProgress);
+  const targetCourseId: CourseId =
+    courseId ?? (localUserState.courseId === 'ccao-f' ? 'ccao-f' : 'ccdv-f');
+  const rawObj = serverRawProgress as Record<string, unknown>;
+  // Ignore server payload if it belongs to a different course!
+  if (typeof rawObj.courseId === 'string' && rawObj.courseId !== targetCourseId) {
+    return localUserState;
+  }
+  const serverState = sanitizeProgressState(serverRawProgress, targetCourseId);
   const serverBackup = exportBackupPayload(serverState);
   return applyBackupImport(localUserState, serverBackup, 'merge');
 }
@@ -68,6 +77,7 @@ export interface AuthApiResponse {
   token?: string;
   user?: AuthUser;
   progress?: unknown;
+  progressByCourse?: Record<string, unknown>;
   dbConnected?: boolean;
   dbError?: string | null;
 }

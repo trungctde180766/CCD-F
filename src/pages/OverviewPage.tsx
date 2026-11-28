@@ -16,16 +16,20 @@ import {
   Timer,
   TrendingUp,
 } from 'lucide-react';
-import { DATASET_VALIDATION, QUESTION_BANK, QUESTIONS_BY_ID } from '../data/questionBank';
+import type { CourseBundle } from '../data/questionBank';
 import type { AggregateStats } from '../lib/stats';
 import type {
   ActiveSession,
   AppProgressState,
+  CourseId,
   NavigationTab,
   QuestionFilterType,
 } from '../types';
 
 interface OverviewPageProps {
+  course: CourseBundle;
+  courses: CourseBundle[];
+  onSelectCourse: (courseId: CourseId) => void;
   state: AppProgressState;
   stats: AggregateStats;
   onNavigateTab: (tab: NavigationTab) => void;
@@ -36,6 +40,9 @@ interface OverviewPageProps {
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
+  course,
+  courses,
+  onSelectCourse,
   state,
   stats,
   onNavigateTab,
@@ -50,7 +57,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       : null;
 
   const lastStudiedQuestion = state.lastStudiedQuestionId
-    ? QUESTIONS_BY_ID[state.lastStudiedQuestionId]
+    ? course.questionsById[state.lastStudiedQuestionId]
     : null;
 
   const progressBarAnsweredPct = Math.round((stats.answeredCount / stats.totalQuestions) * 100);
@@ -58,9 +65,75 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     (stats.correctUnassistedLatestCount / stats.totalQuestions) * 100
   );
   const progressBarViewedOnlyPct = Math.round((stats.viewedOnlyCount / stats.totalQuestions) * 100);
+  const multiIdsPreview =
+    course.validation.multipleChoiceQuestions.length <= 10
+      ? course.validation.multipleChoiceQuestions
+          .map((m) => m.id.replace(/^.*-(q\d+)$/, '$1'))
+          .join(', ')
+      : `${course.validation.multipleChoiceQuestions
+          .slice(0, 6)
+          .map((m) => m.id.replace(/^.*-(q\d+)$/, '$1'))
+          .join(', ')} ... (${course.validation.multipleChoiceCount} câu)`;
 
   return (
     <div className="space-y-8">
+      {/* Dual-Course Selector Cards */}
+      <section aria-label="Chọn bộ đề chứng chỉ" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {courses.map((c) => {
+          const isCurrent = c.id === course.id;
+          const isAssoc = c.id === 'ccao-f';
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onSelectCourse(c.id)}
+              className={`text-left p-5 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
+                isCurrent
+                  ? isAssoc
+                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                    : 'bg-brand-50/80 dark:bg-brand-950/35 border-brand-500 ring-2 ring-brand-500/20 shadow-sm'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      isAssoc
+                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                        : 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
+                    }`}
+                  >
+                    {c.shortCode} • {c.validation.totalQuestions} câu (Rev {c.bank.revision})
+                  </span>
+                  {isCurrent ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Đang chọn
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Bấm để chuyển bộ đề →
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {c.name}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {c.descriptionVi}
+                </p>
+              </div>
+              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex flex-wrap gap-3 pt-1 border-t border-slate-200/70 dark:border-slate-800">
+                <span>• {c.validation.singleChoiceCount} câu chọn 1</span>
+                <span>• {c.validation.multipleChoiceCount} câu chọn nhiều</span>
+                <span>• Lưu tiến độ tách biệt hoàn toàn</span>
+              </div>
+            </button>
+          );
+        })}
+      </section>
+
       {/* Hero & Continue Learning Banner */}
       <section className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-brand-900 text-white shadow-md border border-slate-800">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -68,12 +141,13 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-400/30 text-brand-200 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                Ngân hàng {DATASET_VALIDATION.totalQuestions} câu hỏi thực tế ({DATASET_VALIDATION.singleChoiceCount}{' '}
-                single_choice • {DATASET_VALIDATION.multipleChoiceCount} multiple_choice)
+                Ngân hàng {course.validation.totalQuestions} câu hỏi thực tế (
+                {course.validation.singleChoiceCount} single_choice •{' '}
+                {course.validation.multipleChoiceCount} multiple_choice)
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Bảng điều khiển tự học CCDV-F
+              Bảng điều khiển tự học {course.shortCode}
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed">
               Hệ thống phân biệt rõ <strong>Đã xem</strong> (mới mở đọc câu hỏi),{' '}
@@ -122,7 +196,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                   onClick={() =>
                     onOpenStudyWithFilter(
                       'all',
-                      lastStudiedQuestion ? lastStudiedQuestion.id : 'ccdv-f-q001'
+                      lastStudiedQuestion ? lastStudiedQuestion.id : course.firstQuestionId
                     )
                   }
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-sm transition-colors"
@@ -360,9 +434,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Đánh dấu và ghi chú được gắn theo mã câu hỏi (<code className="font-mono">ccdv-f-q001</code>
-              ..
-              <code className="font-mono">q110</code>) để lọc luyện tập nhanh.
+              Đánh dấu và ghi chú được gắn theo mã câu hỏi (
+              <code className="font-mono">{course.questions[0]?.id}</code>..
+              <code className="font-mono">
+                {course.questions[course.questions.length - 1]?.id}
+              </code>
+              ) để lọc luyện tập nhanh.
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -381,18 +458,20 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <span>Nhóm 8 câu chọn nhiều đáp án</span>
+              <span>Nhóm {course.validation.multipleChoiceCount} câu chọn nhiều đáp án</span>
               <Target className="w-4 h-4 text-amber-500" />
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">8 câu</span>
+              <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {course.validation.multipleChoiceCount} câu
+              </span>
               <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
                 multiple_choice
               </span>
             </div>
             <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Gồm các mã: <code className="font-mono">q078, q081, q087, q092, q100, q103, q104, q106</code>.
-              Chấm theo tập hợp ID lựa chọn (chọn đủ, không chọn thừa).
+              Gồm các mã: <code className="font-mono">{multiIdsPreview}</code>. Chấm theo tập hợp ID
+              lựa chọn (chọn đủ, không chọn thừa).
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -401,7 +480,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               onClick={() => onOpenStudyWithFilter('multiple_choice')}
               className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1"
             >
-              <span>Luyện riêng 8 câu chọn nhiều đáp án</span>
+              <span>Luyện riêng {course.validation.multipleChoiceCount} câu chọn nhiều đáp án</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -419,8 +498,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Topic gốc được giữ nguyên là{' '}
-                <code className="font-mono">{QUESTION_BANK.topics[0]?.id}</code>. Các nhãn dưới đây
-                được gán tự động theo từ khóa kỹ thuật để hỗ trợ ôn tập theo mảng.
+                <code className="font-mono">{course.bank.topics[0]?.id}</code>. Các nhãn dưới đây
+                được gán tự động theo từ khóa để hỗ trợ ôn tập theo mảng.
               </p>
             </div>
           </div>
@@ -582,7 +661,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               onClick={() => {
                 if (
                   window.confirm(
-                    'Bạn có chắc muốn Reset toàn bộ tiến độ học tập về 0/110 câu để học & thi lại từ đầu không?'
+                    `Bạn có chắc muốn Reset toàn bộ tiến độ bộ đề ${course.shortCode} về 0/${course.questions.length} câu để học & thi lại từ đầu không?`
                   )
                 ) {
                   onResetAllProgress();
@@ -590,7 +669,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               }}
               className="font-semibold text-rose-600 dark:text-rose-400 hover:underline"
             >
-              Reset làm lại từ đầu (0/110)
+              Reset làm lại từ đầu (0/{course.questions.length})
             </button>
           </div>
         </section>

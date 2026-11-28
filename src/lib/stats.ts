@@ -62,7 +62,8 @@ export interface AggregateStats {
 
 export function computeAggregateStats(
   state: AppProgressState,
-  now: Date | number | string = new Date()
+  now: Date | number | string = new Date(),
+  questions: Question[] = QUESTIONS
 ): AggregateStats {
   const attemptsByQuestion = new Map<string, AttemptRecord[]>();
   for (const att of state.attempts) {
@@ -92,7 +93,7 @@ export function computeAggregateStats(
 
   const tagMap = new Map<string, { total: number; answered: number; correctLatest: number }>();
 
-  for (const q of QUESTIONS) {
+  for (const q of questions) {
     const qAttempts = attemptsByQuestion.get(q.id) || [];
     const isAnswered = qAttempts.length > 0;
     const isViewed = Boolean(state.viewedQuestions[q.id]) || isAnswered;
@@ -181,7 +182,7 @@ export function computeAggregateStats(
     .sort((a, b) => b.total - a.total);
 
   return {
-    totalQuestions: QUESTIONS.length,
+    totalQuestions: questions.length,
     unansweredCount,
     answeredCount,
     viewedTotalCount,

@@ -1,10 +1,15 @@
-import { QUESTION_BANK, QUESTIONS_BY_ID } from '../data/questionBank';
+import {
+  ALL_QUESTIONS_BY_ID,
+  getCourseBundle,
+  QUESTION_BANK,
+} from '../data/questionBank';
 import type {
   ActiveSession,
   AppProgressState,
   AttemptRecord,
   BackupPayload,
   BackupPreview,
+  CourseId,
   CustomExamPack,
   SessionHistoryItem,
   StudyMode,
@@ -13,12 +18,56 @@ import { gradeQuestion } from './scoring';
 import { computeNextSRSState } from './srs';
 
 export const STORAGE_KEY = 'ccdv_f_study_progress_v1';
+export const ACTIVE_COURSE_STORAGE_KEY = 'claude_cert_active_course_v1';
 export const CURRENT_SCHEMA_VERSION = 1;
 export const BACKUP_FORMAT_VERSION = 1;
 
-export function getStorageKeyForUser(username?: string | null): string {
+export function loadSelectedCourseId(): CourseId {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return 'ccdv-f';
+    const raw = window.localStorage.getItem(ACTIVE_COURSE_STORAGE_KEY);
+    if (raw === 'ccao-f' || raw === 'ccdv-f') return raw;
+    return 'ccdv-f';
+  } catch {
+    return 'ccdv-f';
+  }
+}
+
+export function saveSelectedCourseId(courseId: CourseId): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(ACTIVE_COURSE_STORAGE_KEY, courseId);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/**
+ * Computes storage key isolated by courseId + revision + username so Associate (ccao-f rev 3)
+ * and Developer (ccdv-f rev 2) never overwrite each other.
+ * Developer (ccdv-f rev 2) keeps its existing key format for 100% backward compatibility.
+ */
+export function getStorageKeyForUser(
+  username?: string | null,
+  courseId: CourseId = 'ccdv-f'
+): string {
   const clean = (username || '').trim().toLowerCase();
-  return clean ? `${STORAGE_KEY}_user_${clean}` : STORAGE_KEY;
+  const course = getCourseBundle(courseId);
+  if (course.id === 'ccdv-f') {
+    return clean ? `${STORAGE_KEY}_user_${clean}` : STORAGE_KEY;
+  }
+  const baseKey = `claude_cert_progress_v${CURRENT_SCHEMA_VERSION}_${course.id}_r${course.bank.revision}`;
+  return clean ? `${baseKey}_user_${clean}` : baseKey;
+}
+
+/** Composite progress identifier including courseId + revision + questionId */
+export function getCourseQuestionKey(
+  courseId: CourseId,
+  questionId: string,
+  revision?: number
+): string {
+  const rev = revision ?? getCourseBundle(courseId).bank.revision;
+  return `${courseId}:r${rev}:${questionId}`;
 }
 
 export interface StorageStatus {
@@ -26,11 +75,12 @@ export interface StorageStatus {
   error: string | null;
 }
 
-export function createInitialProgressState(): AppProgressState {
+export function createInitialProgressState(courseId: CourseId = 'ccdv-f'): AppProgressState {
+  const course = getCourseBundle(courseId);
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    courseId: QUESTION_BANK.id,
-    courseRevision: QUESTION_BANK.revision,
+    courseId: course.bank.id,
+    courseRevision: course.bank.revision,
     viewedQuestions: {},
     bookmarks: {},
     notes: {},
@@ -79,7 +129,7 @@ function sanitizeCustomExamPacks(rawPacks: unknown): CustomExamPack[] {
     const uniqueValidQIds = Array.from(
       new Set(
         p.questionIds.filter(
-          (qId): qId is string => typeof qId === 'string' && Boolean(QUESTIONS_BY_ID[qId])
+          (qId): qId is string => typeof qId === 'string' && Boolean(ALL_QUESTIONS_BY_ID[qId])
         )
       )
     );
@@ -109,15 +159,22 @@ function sanitizeCustomExamPacks(rawPacks: unknown): CustomExamPack[] {
   return validPacks;
 }
 
-export function sanitizeProgressState(raw: unknown): AppProgressState {
-  const initial = createInitialProgressState();
-  if (!raw || typeof raw !== 'object') return initial;
-  const obj = raw as Partial<AppProgressState>;
+export function sanitizeProgressState(
+  raw: unknown,
+  courseId?: CourseId
+): AppProgressState {
+  const rawObj = raw && typeof raw === 'object' ? (raw as Partial<AppProgressState>) : null;
+  const resolvedCourseId: CourseId =
+    courseId ?? (rawObj?.courseId === 'ccao-f' ? 'ccao-f' : 'ccdv-f');
+  const initial = createInitialProgressState(resolvedCourseId);
+  if (!rawObj) return initial;
+  const obj = rawObj;
 
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    courseId: typeof obj.courseId === 'string' ? obj.courseId : initial.courseId,
-    courseRevision: typeof obj.courseRevision === 'number' ? obj.courseRevision : initial.courseRevision,
+    courseId: initial.courseId,
+    courseRevision:
+      typeof obj.courseRevision === 'number' ? obj.courseRevision : initial.courseRevision,
     viewedQuestions:
       obj.viewedQuestions && typeof obj.viewedQuestions === 'object' ? { ...obj.viewedQuestions } : {},
     bookmarks: obj.bookmarks && typeof obj.bookmarks === 'object' ? { ...obj.bookmarks } : {},
@@ -129,7 +186,9 @@ export function sanitizeProgressState(raw: unknown): AppProgressState {
       obj.studyProgress && typeof obj.studyProgress === 'object' ? obj.studyProgress : null,
     lastActiveTab:
       typeof obj.lastActiveTab === 'string' &&
-      ['overview', 'study', 'practice', 'exam', 'review', 'admin'].includes(obj.lastActiveTab)
+      ['overview', 'study', 'practice', 'exam', 'review', 'library', 'admin'].includes(
+        obj.lastActiveTab
+      )
         ? obj.lastActiveTab
         : 'overview',
     sessionHistory: Array.isArray(obj.sessionHistory) ? obj.sessionHistory : [],
@@ -140,25 +199,28 @@ export function sanitizeProgressState(raw: unknown): AppProgressState {
   };
 }
 
-export function loadProgressState(username?: string | null): {
+export function loadProgressState(
+  username?: string | null,
+  courseId: CourseId = 'ccdv-f'
+): {
   state: AppProgressState;
   storageStatus: StorageStatus;
 } {
   const health = checkLocalStorageHealth();
   if (!health.available) {
-    return { state: createInitialProgressState(), storageStatus: health };
+    return { state: createInitialProgressState(courseId), storageStatus: health };
   }
-  const key = getStorageKeyForUser(username);
+  const key = getStorageKeyForUser(username, courseId);
   try {
     const serialized = window.localStorage.getItem(key);
     if (!serialized) {
-      return { state: createInitialProgressState(), storageStatus: health };
+      return { state: createInitialProgressState(courseId), storageStatus: health };
     }
     const parsed = JSON.parse(serialized);
-    return { state: sanitizeProgressState(parsed), storageStatus: health };
+    return { state: sanitizeProgressState(parsed, courseId), storageStatus: health };
   } catch {
     return {
-      state: createInitialProgressState(),
+      state: createInitialProgressState(courseId),
       storageStatus: {
         available: true,
         error: 'Dữ liệu lưu cục bộ bị hỏng định dạng; hệ thống đã khởi tạo trạng thái an toàn mới.',
@@ -169,7 +231,8 @@ export function loadProgressState(username?: string | null): {
 
 export function saveProgressState(
   state: AppProgressState,
-  username?: string | null
+  username?: string | null,
+  courseId?: CourseId
 ): StorageStatus {
   try {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -178,9 +241,12 @@ export function saveProgressState(
         error: 'Không có localStorage để lưu tiến độ.',
       };
     }
-    const key = getStorageKeyForUser(username);
+    const resolvedCourseId: CourseId =
+      courseId ?? (state.courseId === 'ccao-f' ? 'ccao-f' : 'ccdv-f');
+    const key = getStorageKeyForUser(username, resolvedCourseId);
     const nextState: AppProgressState = {
       ...state,
+      courseId: resolvedCourseId,
       updatedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(key, JSON.stringify(nextState));
@@ -206,7 +272,7 @@ export function markQuestionViewed(
   questionId: string,
   now: Date = new Date()
 ): AppProgressState {
-  if (!QUESTIONS_BY_ID[questionId]) return state;
+  if (!ALL_QUESTIONS_BY_ID[questionId]) return state;
   const alreadyViewed = state.viewedQuestions[questionId];
   return {
     ...state,
@@ -276,7 +342,7 @@ export function recordSingleQuestionAttempt(
   }
 ): { nextState: AppProgressState; attempt: AttemptRecord } {
   const now = params.now ?? new Date();
-  const question = QUESTIONS_BY_ID[params.questionId];
+  const question = ALL_QUESTIONS_BY_ID[params.questionId];
   if (!question) {
     throw new Error(`Không tìm thấy câu hỏi ${params.questionId}`);
   }
@@ -398,7 +464,7 @@ export function submitActiveSessionIdempotent(
   let correctCount = 0;
 
   for (const qId of session.questionOrder) {
-    const question = QUESTIONS_BY_ID[qId];
+    const question = ALL_QUESTIONS_BY_ID[qId];
     if (!question) continue;
 
     const selected = session.selections[qId] || [];
@@ -509,14 +575,17 @@ export function submitActiveSessionIdempotent(
  * Creates a backup JSON payload with version, export timestamp, and question bank metadata.
  */
 export function exportBackupPayload(state: AppProgressState, now: Date = new Date()): BackupPayload {
+  const course = getCourseBundle(state.courseId);
   return {
     backupFormatVersion: BACKUP_FORMAT_VERSION,
     exportedAt: now.toISOString(),
-    courseId: QUESTION_BANK.id,
-    courseRevision: QUESTION_BANK.revision,
-    questionCount: QUESTION_BANK.questions.length,
+    courseId: course.bank.id,
+    courseRevision: course.bank.revision,
+    questionCount: course.questions.length,
     data: {
       ...state,
+      courseId: course.bank.id,
+      courseRevision: course.bank.revision,
       updatedAt: now.toISOString(),
     },
   };
@@ -526,7 +595,11 @@ export function exportBackupPayload(state: AppProgressState, now: Date = new Dat
  * Validates a backup JSON string before importing and produces a preview of counts.
  * Never mutates current state.
  */
-export function validateAndPreviewBackupJson(jsonText: string): BackupPreview {
+export function validateAndPreviewBackupJson(
+  jsonText: string,
+  expectedCourseId: CourseId = QUESTION_BANK.id as CourseId
+): BackupPreview {
+  const targetCourse = getCourseBundle(expectedCourseId);
   const errors: string[] = [];
   if (!jsonText || !jsonText.trim()) {
     return { isValid: false, errors: ['Nội dung file JSON trống.'] };
@@ -553,9 +626,9 @@ export function validateAndPreviewBackupJson(jsonText: string): BackupPreview {
   if (typeof candidate.backupFormatVersion !== 'number') {
     errors.push('Thiếu hoặc sai kiểu trường backupFormatVersion.');
   }
-  if (candidate.courseId !== QUESTION_BANK.id) {
+  if (candidate.courseId !== targetCourse.bank.id) {
     errors.push(
-      `Mã ngân hàng câu hỏi không khớp: mong đợi "${QUESTION_BANK.id}", nhận được "${String(candidate.courseId)}".`
+      `Mã ngân hàng câu hỏi không khớp: mong đợi "${targetCourse.bank.id}", nhận được "${String(candidate.courseId)}".`
     );
   }
   if (!candidate.data || typeof candidate.data !== 'object' || Array.isArray(candidate.data)) {
@@ -582,7 +655,12 @@ export function validateAndPreviewBackupJson(jsonText: string): BackupPreview {
 
   if (Array.isArray(data.attempts)) {
     for (const att of data.attempts) {
-      if (!att || typeof att !== 'object' || typeof att.questionId !== 'string' || !QUESTIONS_BY_ID[att.questionId]) {
+      if (
+        !att ||
+        typeof att !== 'object' ||
+        typeof att.questionId !== 'string' ||
+        !targetCourse.questionsById[att.questionId]
+      ) {
         errors.push(`Bản ghi lịch sử trả lời có questionId không hợp lệ: "${String(att?.questionId)}".`);
         break;
       }
@@ -597,7 +675,7 @@ export function validateAndPreviewBackupJson(jsonText: string): BackupPreview {
     return { isValid: false, errors };
   }
 
-  const cleanData = sanitizeProgressState(data);
+  const cleanData = sanitizeProgressState(data, targetCourse.id);
   const answeredUniqueIds = new Set(cleanData.attempts.map((a) => a.questionId));
 
   return {
@@ -619,8 +697,8 @@ export function validateAndPreviewBackupJson(jsonText: string): BackupPreview {
       backupFormatVersion: candidate.backupFormatVersion!,
       exportedAt: candidate.exportedAt || new Date().toISOString(),
       courseId: candidate.courseId!,
-      courseRevision: candidate.courseRevision ?? QUESTION_BANK.revision,
-      questionCount: candidate.questionCount ?? QUESTION_BANK.questions.length,
+      courseRevision: candidate.courseRevision ?? targetCourse.bank.revision,
+      questionCount: candidate.questionCount ?? targetCourse.questions.length,
       data: cleanData,
     },
   };
@@ -739,7 +817,7 @@ export function upsertCustomExamPack(
   now: Date = new Date()
 ): { nextState: AppProgressState; pack: CustomExamPack | null } {
   const uniqueValidIds = Array.from(
-    new Set(input.questionIds.filter((qId) => Boolean(QUESTIONS_BY_ID[qId])))
+    new Set(input.questionIds.filter((qId) => Boolean(ALL_QUESTIONS_BY_ID[qId])))
   );
   if (uniqueValidIds.length === 0) {
     return { nextState: state, pack: null };

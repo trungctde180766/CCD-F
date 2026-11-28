@@ -17,11 +17,14 @@ import {
   Timer,
   User,
 } from 'lucide-react';
-import { QUESTION_BANK } from '../data/questionBank';
-import type { ActiveSession, AuthUser, NavigationTab } from '../types';
+import type { CourseBundle } from '../data/questionBank';
+import type { ActiveSession, AuthUser, CourseId, NavigationTab } from '../types';
 import type { StorageStatus } from '../lib/storage';
 
 interface LayoutProps {
+  activeCourse: CourseBundle;
+  courses: CourseBundle[];
+  onSelectCourse: (courseId: CourseId) => void;
   activeTab: NavigationTab;
   onSelectTab: (tab: NavigationTab) => void;
   darkMode: boolean;
@@ -39,6 +42,9 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({
+  activeCourse,
+  courses,
+  onSelectCourse,
   activeTab,
   onSelectTab,
   darkMode,
@@ -91,6 +97,11 @@ export const Layout: React.FC<LayoutProps> = ({
           ? 'bg-brand-600 text-white'
           : 'bg-rose-100 text-rose-800 dark:bg-rose-900/70 dark:text-rose-200',
     },
+    {
+      id: 'library',
+      label: 'Thư viện & Sao lưu',
+      icon: <Database className="w-4 h-4" />,
+    },
   ];
 
   if (authUser?.role === 'admin') {
@@ -109,19 +120,56 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="h-16 flex items-center justify-between gap-3">
-            {/* Brand Title */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center font-mono font-bold text-sm shadow-xs shrink-0">
-                CC
+          <div className="min-h-16 py-2 flex flex-wrap items-center justify-between gap-3">
+            {/* Brand Title + Course Switcher */}
+            <div className="flex flex-wrap items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`w-10 h-10 rounded-xl text-white flex items-center justify-center font-mono font-bold text-xs shadow-xs shrink-0 ${
+                    activeCourse.id === 'ccao-f' ? 'bg-indigo-600' : 'bg-brand-600'
+                  }`}
+                >
+                  {activeCourse.id === 'ccao-f' ? 'CCA' : 'CCD'}
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {activeCourse.name}
+                  </h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {activeCourse.validation.totalQuestions} câu thực tế (
+                    {activeCourse.validation.singleChoiceCount} chọn 1 •{' '}
+                    {activeCourse.validation.multipleChoiceCount} chọn nhiều) • Revision{' '}
+                    {activeCourse.bank.revision}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
-                  Claude Certified Developer – Foundations
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  110 câu thực tế (102 chọn 1 • 8 chọn nhiều) • Revision {QUESTION_BANK.revision}
-                </p>
+
+              {/* Dual-Course Switcher Pill */}
+              <div
+                role="group"
+                aria-label="Chọn bộ đề chứng chỉ"
+                className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+              >
+                {courses.map((c) => {
+                  const isSelected = c.id === activeCourse.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => onSelectCourse(c.id)}
+                      aria-pressed={isSelected}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        isSelected
+                          ? c.id === 'ccao-f'
+                            ? 'bg-indigo-600 text-white shadow-2xs'
+                            : 'bg-brand-600 text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {c.shortTitle} ({c.questions.length}c)
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -269,11 +317,26 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
           <div className="space-y-1 max-w-3xl">
             <p className="font-semibold text-slate-700 dark:text-slate-300">
-              Claude Certified Developer – Foundations (CCDV-F • 110 câu hỏi luyện tập)
+              {activeCourse.name} ({activeCourse.shortCode} • {activeCourse.questions.length} câu hỏi
+              luyện tập • Revision {activeCourse.bank.revision})
             </p>
+            {activeCourse.showSourceAttribution && activeCourse.bank.extraction && (
+              <p>
+                Nguồn tham khảo: <strong>{activeCourse.bank.extraction.sourceAuthor}</strong> (
+                <a
+                  href={activeCourse.bank.extraction.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-600 dark:text-brand-400 underline hover:text-brand-700"
+                >
+                  {activeCourse.bank.extraction.sourceUrl}
+                </a>
+                ) • Ngày thu thập: {activeCourse.bank.extraction.retrievedDate}.
+              </p>
+            )}
             <p>
-              Tài liệu luyện tập tham khảo phục vụ mục đích tự học cá nhân và nhóm học tập, không
-              phải sản phẩm chính thức của Anthropic hay ngân hàng đề thi thật.
+              Tài liệu luyện tập tham khảo phục vụ mục đích tự học cá nhân, chưa được thẩm định độc
+              lập và không phải sản phẩm chính thức của Anthropic hay ngân hàng đề thi thật.
             </p>
           </div>
           <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 shrink-0">

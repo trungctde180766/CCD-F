@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, Info } from 'lucide-react';
 import type { ContentBlock } from '../types';
 
 interface BlockRendererProps {
@@ -118,6 +119,35 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({ blocks, className 
                 );
               })}
             </ListTag>
+          );
+        }
+
+        if (block.type === 'callout') {
+          const isWarning = block.tone === 'warning';
+          const title = typeof block.title === 'string' ? block.title : '';
+          const text = typeof block.text === 'string' ? block.text : '';
+          return (
+            <div
+              key={index}
+              role="note"
+              className={`p-3.5 sm:p-4 rounded-xl border text-xs sm:text-sm space-y-1.5 ${
+                isWarning
+                  ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                  : 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-950 dark:text-blue-100'
+              }`}
+            >
+              {title && (
+                <div className="font-bold flex items-center gap-1.5">
+                  {isWarning ? (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  ) : (
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                  )}
+                  <span>{renderInlineCodeSafe(title)}</span>
+                </div>
+              )}
+              {text && <p className="leading-relaxed break-words">{renderMultilineText(text)}</p>}
+            </div>
           );
         }
 
