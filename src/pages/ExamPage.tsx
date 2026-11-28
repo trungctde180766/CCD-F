@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   Flag,
+  FolderPlus,
   Grid,
   Info,
   Play,
@@ -25,8 +26,13 @@ import type { AggregateStats } from '../lib/stats';
 import type {
   ActiveSession,
   AppProgressState,
+  CustomExamPack,
   QuestionFilterType,
 } from '../types';
+import {
+  CustomExamPackBuilder,
+  CustomPackDraftInput,
+} from '../components/CustomExamPackBuilder';
 import { QuestionCard } from '../components/QuestionCard';
 import { QuestionGridDrawer, QuestionGridItem } from '../components/QuestionGridDrawer';
 
@@ -42,6 +48,8 @@ interface ExamPageProps {
   onExitSession: () => void;
   onToggleBookmark: (questionId: string) => void;
   onSaveNote: (questionId: string, note: string) => void;
+  onSaveCustomPack: (draft: CustomPackDraftInput) => CustomExamPack | null;
+  onDeleteCustomPack: (packId: string) => void;
 }
 
 export const ExamPage: React.FC<ExamPageProps> = ({
@@ -56,7 +64,10 @@ export const ExamPage: React.FC<ExamPageProps> = ({
   onExitSession,
   onToggleBookmark,
   onSaveNote,
+  onSaveCustomPack,
+  onDeleteCustomPack,
 }) => {
+  const [configTab, setConfigTab] = useState<'auto' | 'custom'>('auto');
   const [filterType, setFilterType] = useState<QuestionFilterType>('all');
   const [questionCount, setQuestionCount] = useState<number>(30);
   const [durationMinutes, setDurationMinutes] = useState<number>(45);
@@ -127,6 +138,30 @@ export const ExamPage: React.FC<ExamPageProps> = ({
       shuffleQuestions,
       durationMinutes,
       targetScorePercent,
+    });
+    if (res.session) {
+      autoSubmitTriggeredRef.current = null;
+      onStartSession(res.session);
+    }
+  };
+
+  const handleStartCustomPackExam = (params: {
+    title: string;
+    questionIds: string[];
+    durationMinutes: number;
+    targetScorePercent: number;
+    shuffleQuestions: boolean;
+  }) => {
+    const res = createSessionFromPool(stats, {
+      mode: 'exam',
+      title: params.title,
+      filterType: 'all',
+      filterLabel: `Gói tự chọn (${params.questionIds.length} câu)`,
+      customQuestionIds: params.questionIds,
+      requestedCount: params.questionIds.length,
+      shuffleQuestions: params.shuffleQuestions,
+      durationMinutes: params.durationMinutes,
+      targetScorePercent: params.targetScorePercent,
     });
     if (res.session) {
       autoSubmitTriggeredRef.current = null;
@@ -478,9 +513,68 @@ export const ExamPage: React.FC<ExamPageProps> = ({
   }
 
   // Configuration View for Mock Exam
+  const customPacks = state.customExamPacks || [];
+
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6">
+    <div className="max-w-5xl mx-auto space-y-5">
+      {/* Mode Switcher: Auto Mock Exam vs Custom Question Pack Builder */}
+      <div
+        className="inline-flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-slate-200/75 dark:bg-slate-800/80 border border-slate-300/70 dark:border-slate-700"
+        role="tablist"
+        aria-label="Chế độ tạo đề thi thử"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={configTab === 'auto'}
+          onClick={() => setConfigTab('auto')}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors ${
+            configTab === 'auto'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+          }`}
+        >
+          <Timer className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          <span>Thi thử nhanh (Tự động)</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={configTab === 'custom'}
+          onClick={() => setConfigTab('custom')}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors ${
+            configTab === 'custom'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+          }`}
+        >
+          <FolderPlus className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+          <span>Tự chọn câu &amp; Gói đề</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              configTab === 'custom'
+                ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
+                : 'bg-slate-300/70 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+            }`}
+          >
+            {customPacks.length} gói
+          </span>
+        </button>
+      </div>
+
+      {configTab === 'custom' ? (
+        <CustomExamPackBuilder
+          packs={customPacks}
+          stats={stats}
+          bookmarks={state.bookmarks}
+          onSavePack={onSaveCustomPack}
+          onDeletePack={onDeleteCustomPack}
+          onStartExamFromPack={handleStartCustomPackExam}
+        />
+      ) : (
+        <div className="max-w-3xl mx-auto">
+          <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
@@ -700,6 +794,8 @@ export const ExamPage: React.FC<ExamPageProps> = ({
           </button>
         </form>
       </div>
+    </div>
+      )}
     </div>
   );
 };

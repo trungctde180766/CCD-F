@@ -205,6 +205,17 @@ export interface StudySessionProgress {
   updatedAt: string;
 }
 
+export interface CustomExamPack {
+  id: string;
+  name: string;
+  questionIds: string[];
+  durationMinutes: number;
+  targetScorePercent: number;
+  shuffleQuestions: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppProgressState {
   schemaVersion: number;
   courseId: string;
@@ -218,6 +229,7 @@ export interface AppProgressState {
   studyProgress: StudySessionProgress | null;
   lastActiveTab?: NavigationTab;
   sessionHistory: SessionHistoryItem[];
+  customExamPacks: CustomExamPack[];
   lastStudiedQuestionId: string | null;
   updatedAt: string;
 }

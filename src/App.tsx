@@ -9,6 +9,7 @@ import {
 } from './lib/auth';
 import {
   createInitialProgressState,
+  deleteCustomExamPack,
   loadProgressState,
   markQuestionViewed,
   recordSingleQuestionAttempt,
@@ -17,6 +18,7 @@ import {
   submitActiveSessionIdempotent,
   toggleQuestionBookmark,
   updateQuestionNote,
+  upsertCustomExamPack,
 } from './lib/storage';
 import { computeAggregateStats } from './lib/stats';
 import { createSessionFromPool } from './lib/session';
@@ -24,10 +26,12 @@ import type {
   ActiveSession,
   AppProgressState,
   AuthUser,
+  CustomExamPack,
   NavigationTab,
   QuestionFilterType,
   StudySessionProgress,
 } from './types';
+import type { CustomPackDraftInput } from './components/CustomExamPackBuilder';
 import { AuthGatePage } from './components/AuthGatePage';
 import { AuthModal } from './components/AuthModal';
 import { Layout } from './components/Layout';
@@ -522,6 +526,26 @@ export const App: React.FC = () => {
     }));
   }, [updateStateAndPersist, activeTab]);
 
+  const handleSaveCustomPack = useCallback(
+    (draft: CustomPackDraftInput): CustomExamPack | null => {
+      const now = new Date();
+      const packId =
+        draft.id || `pack_${now.getTime()}_${Math.random().toString(36).slice(2, 7)}`;
+      const preview = upsertCustomExamPack(state, { ...draft, id: packId }, now);
+      if (!preview.pack) return null;
+      updateStateAndPersist((prev) => upsertCustomExamPack(prev, { ...draft, id: packId }, now).nextState);
+      return preview.pack;
+    },
+    [state, updateStateAndPersist]
+  );
+
+  const handleDeleteCustomPack = useCallback(
+    (packId: string) => {
+      updateStateAndPersist((prev) => deleteCustomExamPack(prev, packId));
+    },
+    [updateStateAndPersist]
+  );
+
   // MANDATORY LOGIN GATE: Users must authenticate before accessing any study/exam content
   if (!authSession || !authSession.user) {
     return (
@@ -604,6 +628,8 @@ export const App: React.FC = () => {
           onExitSession={handleExitSession}
           onToggleBookmark={handleToggleBookmark}
           onSaveNote={handleSaveNote}
+          onSaveCustomPack={handleSaveCustomPack}
+          onDeleteCustomPack={handleDeleteCustomPack}
         />
       )}
 

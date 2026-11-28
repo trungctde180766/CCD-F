@@ -1,4 +1,4 @@
-import { QUESTIONS } from '../data/questionBank';
+import { QUESTIONS, QUESTIONS_BY_ID } from '../data/questionBank';
 import type {
   ActiveSession,
   Question,
@@ -51,6 +51,7 @@ export function getFilteredPool(
 export interface CreateSessionParams {
   mode: StudyMode;
   title?: string;
+  filterLabel?: string;
   filterType: QuestionFilterType;
   derivedTag?: string;
   requestedCount: number;
@@ -79,7 +80,9 @@ export function createSessionFromPool(
 ): CreateSessionResult {
   const now = params.now ?? new Date();
   const baseIds = params.customQuestionIds
-    ? [...params.customQuestionIds]
+    ? Array.from(
+        new Set(params.customQuestionIds.filter((qId) => Boolean(QUESTIONS_BY_ID[qId])))
+      )
     : getFilteredPool(stats, params.filterType, params.derivedTag).map((q) => q.id);
 
   const availableCount = baseIds.length;
@@ -113,11 +116,17 @@ export function createSessionFromPool(
       ? `Luyện tập (${usedCount} câu — ${FILTER_LABELS[params.filterType]})`
       : `Học từng câu`;
 
+  const resolvedFilterLabel =
+    params.filterLabel ||
+    (params.customQuestionIds
+      ? `Gói tự chọn (${usedCount} câu)`
+      : FILTER_LABELS[params.filterType] || params.filterType);
+
   const session: ActiveSession = {
     id: `sess_${params.mode}_${now.getTime()}`,
     mode: params.mode,
     title: params.title || defaultTitle,
-    filterLabel: FILTER_LABELS[params.filterType] || params.filterType,
+    filterLabel: resolvedFilterLabel,
     questionOrder: selectedIds,
     currentQuestionId: selectedIds[0],
     selections: {},

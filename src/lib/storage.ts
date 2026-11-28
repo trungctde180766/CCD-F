@@ -5,6 +5,7 @@ import type {
   AttemptRecord,
   BackupPayload,
   BackupPreview,
+  CustomExamPack,
   SessionHistoryItem,
   StudyMode,
 } from '../types';
@@ -39,6 +40,7 @@ export function createInitialProgressState(): AppProgressState {
     studyProgress: null,
     lastActiveTab: 'overview',
     sessionHistory: [],
+    customExamPacks: [],
     lastStudiedQuestionId: null,
     updatedAt: new Date().toISOString(),
   };
@@ -65,6 +67,48 @@ export function checkLocalStorageHealth(): StorageStatus {
   }
 }
 
+function sanitizeCustomExamPacks(rawPacks: unknown): CustomExamPack[] {
+  if (!Array.isArray(rawPacks)) return [];
+  const validPacks: CustomExamPack[] = [];
+  const seenIds = new Set<string>();
+  for (const item of rawPacks) {
+    if (!item || typeof item !== 'object') continue;
+    const p = item as Partial<CustomExamPack>;
+    if (typeof p.id !== 'string' || !p.id.trim() || seenIds.has(p.id)) continue;
+    if (!Array.isArray(p.questionIds)) continue;
+    const uniqueValidQIds = Array.from(
+      new Set(
+        p.questionIds.filter(
+          (qId): qId is string => typeof qId === 'string' && Boolean(QUESTIONS_BY_ID[qId])
+        )
+      )
+    );
+    if (uniqueValidQIds.length === 0) continue;
+    seenIds.add(p.id);
+    const nowIso = new Date().toISOString();
+    validPacks.push({
+      id: p.id.trim(),
+      name:
+        typeof p.name === 'string' && p.name.trim()
+          ? p.name.trim().slice(0, 120)
+          : `Gói đề tự chọn (${uniqueValidQIds.length} câu)`,
+      questionIds: uniqueValidQIds,
+      durationMinutes:
+        typeof p.durationMinutes === 'number' && Number.isFinite(p.durationMinutes)
+          ? Math.max(1, Math.min(240, Math.round(p.durationMinutes)))
+          : Math.max(5, Math.min(180, Math.ceil(uniqueValidQIds.length * 1.5))),
+      targetScorePercent:
+        typeof p.targetScorePercent === 'number' && Number.isFinite(p.targetScorePercent)
+          ? Math.max(10, Math.min(100, Math.round(p.targetScorePercent)))
+          : 80,
+      shuffleQuestions: typeof p.shuffleQuestions === 'boolean' ? p.shuffleQuestions : true,
+      createdAt: typeof p.createdAt === 'string' ? p.createdAt : nowIso,
+      updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : nowIso,
+    });
+  }
+  return validPacks;
+}
+
 export function sanitizeProgressState(raw: unknown): AppProgressState {
   const initial = createInitialProgressState();
   if (!raw || typeof raw !== 'object') return initial;
@@ -89,6 +133,7 @@ export function sanitizeProgressState(raw: unknown): AppProgressState {
         ? obj.lastActiveTab
         : 'overview',
     sessionHistory: Array.isArray(obj.sessionHistory) ? obj.sessionHistory : [],
+    customExamPacks: sanitizeCustomExamPacks(obj.customExamPacks),
     lastStudiedQuestionId:
       typeof obj.lastStudiedQuestionId === 'string' ? obj.lastStudiedQuestionId : null,
     updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : new Date().toISOString(),
@@ -645,6 +690,17 @@ export function applyBackupImport(
     b.submittedAt.localeCompare(a.submittedAt)
   );
 
+  const packMap = new Map<string, CustomExamPack>();
+  for (const p of [...(currentState.customExamPacks || []), ...(incoming.customExamPacks || [])]) {
+    const existing = packMap.get(p.id);
+    if (!existing || p.updatedAt > existing.updatedAt) {
+      packMap.set(p.id, p);
+    }
+  }
+  const mergedPacks = Array.from(packMap.values()).sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt)
+  );
+
   return {
     ...currentState,
     viewedQuestions: mergedViewed,
@@ -653,6 +709,7 @@ export function applyBackupImport(
     attempts: mergedAttempts,
     srs: mergedSrs,
     sessionHistory: mergedSessions,
+    customExamPacks: mergedPacks,
     activeSession: currentState.activeSession ?? incoming.activeSession,
     studyProgress:
       currentState.studyProgress && incoming.studyProgress
@@ -662,6 +719,76 @@ export function applyBackupImport(
         : currentState.studyProgress ?? incoming.studyProgress,
     lastActiveTab: currentState.lastActiveTab ?? incoming.lastActiveTab,
     lastStudiedQuestionId: currentState.lastStudiedQuestionId ?? incoming.lastStudiedQuestionId,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Creates or updates a user's custom exam pack (a hand-picked bundle of questions).
+ */
+export function upsertCustomExamPack(
+  state: AppProgressState,
+  input: {
+    id?: string;
+    name: string;
+    questionIds: string[];
+    durationMinutes: number;
+    targetScorePercent: number;
+    shuffleQuestions: boolean;
+  },
+  now: Date = new Date()
+): { nextState: AppProgressState; pack: CustomExamPack | null } {
+  const uniqueValidIds = Array.from(
+    new Set(input.questionIds.filter((qId) => Boolean(QUESTIONS_BY_ID[qId])))
+  );
+  if (uniqueValidIds.length === 0) {
+    return { nextState: state, pack: null };
+  }
+
+  const nowIso = now.toISOString();
+  const existingPacks = state.customExamPacks || [];
+  const existing = input.id ? existingPacks.find((p) => p.id === input.id) : undefined;
+
+  const pack: CustomExamPack = {
+    id: existing ? existing.id : input.id || `pack_${now.getTime()}_${Math.random().toString(36).slice(2, 7)}`,
+    name:
+      input.name.trim().slice(0, 120) ||
+      `Gói đề tự chọn #${existingPacks.length + 1} (${uniqueValidIds.length} câu)`,
+    questionIds: uniqueValidIds,
+    durationMinutes: Math.max(1, Math.min(240, Math.round(input.durationMinutes || 30))),
+    targetScorePercent: Math.max(10, Math.min(100, Math.round(input.targetScorePercent || 80))),
+    shuffleQuestions: Boolean(input.shuffleQuestions),
+    createdAt: existing ? existing.createdAt : nowIso,
+    updatedAt: nowIso,
+  };
+
+  const nextPacks = existing
+    ? existingPacks.map((p) => (p.id === pack.id ? pack : p))
+    : [pack, ...existingPacks];
+
+  return {
+    nextState: {
+      ...state,
+      customExamPacks: nextPacks,
+      updatedAt: nowIso,
+    },
+    pack,
+  };
+}
+
+/**
+ * Deletes a saved custom exam pack by ID.
+ */
+export function deleteCustomExamPack(
+  state: AppProgressState,
+  packId: string
+): AppProgressState {
+  const existingPacks = state.customExamPacks || [];
+  const nextPacks = existingPacks.filter((p) => p.id !== packId);
+  if (nextPacks.length === existingPacks.length) return state;
+  return {
+    ...state,
+    customExamPacks: nextPacks,
     updatedAt: new Date().toISOString(),
   };
 }

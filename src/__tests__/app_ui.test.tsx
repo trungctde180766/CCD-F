@@ -107,4 +107,66 @@ describe('Full Application UI End-to-End Flow (Mandatory Auth Gate + Persistent 
     fireEvent.click(screen.getByRole('button', { name: /Ôn câu sai & Nhắc ôn/i }));
     expect(screen.getByText(/Quy tắc nhắc ôn/i)).toBeInTheDocument();
   });
+
+  it('allows hand-picking individual questions into a saved custom exam pack, launching a mock exam with those exact questions, and persisting across reload', () => {
+    saveStoredAuthSession({
+      token: 'test-token-hocvien01',
+      user: {
+        username: 'hocvien01',
+        displayName: 'Học Viên 01',
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      },
+    });
+
+    const { unmount } = render(<App />);
+
+    // Open Mock Exam tab and switch to "Tự chọn câu & Gói đề"
+    fireEvent.click(screen.getByRole('button', { name: /^Thi thử$/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Tự chọn câu & Gói đề/i }));
+
+    // Hand-pick 3 specific questions: Q1, Q5, Q87
+    fireEvent.click(screen.getByLabelText(/Chọn Câu 1 \(ccdv-f-q001\)/i));
+    fireEvent.click(screen.getByLabelText(/Chọn Câu 5 \(ccdv-f-q005\)/i));
+    fireEvent.click(screen.getByLabelText(/Chọn Câu 87 \(ccdv-f-q087\)/i));
+
+    expect(screen.getByText(/Đã chọn: 3 \/ 110 câu/i)).toBeInTheDocument();
+
+    // Name the pack & turn off shuffle so order is deterministic
+    fireEvent.change(screen.getByLabelText(/Tên gói đề thi thử/i), {
+      target: { value: 'Gói tủ 3 câu' },
+    });
+    const shuffleCheckbox = screen.getByLabelText(/Đảo thứ tự câu khi thi/i) as HTMLInputElement;
+    if (shuffleCheckbox.checked) {
+      fireEvent.click(shuffleCheckbox);
+    }
+
+    // Save & start exam immediately
+    fireEvent.click(screen.getByRole('button', { name: /Lưu & Thi thử ngay \(3 câu\)/i }));
+
+    // Verify exam started with title "Gói tủ 3 câu", 3 questions, starting at Q1
+    expect(screen.getByText('Gói tủ 3 câu')).toBeInTheDocument();
+    expect(screen.getByText('ccdv-f-q001')).toBeInTheDocument();
+    expect(screen.getByText(/Câu 1 \/ 3/i)).toBeInTheDocument();
+
+    // Next -> Q5, Next -> Q87
+    fireEvent.click(screen.getByRole('button', { name: /Câu tiếp/i }));
+    expect(screen.getByText('ccdv-f-q005')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Câu tiếp/i }));
+    expect(screen.getByText('ccdv-f-q087')).toBeInTheDocument();
+
+    // Submit & exit back to Exam config, reload app, and verify saved pack persisted!
+    fireEvent.click(screen.getByRole('button', { name: /^Nộp bài$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận nộp bài ngay/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Tạo đề thi mới/i }));
+
+    unmount();
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Thi thử$/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Tự chọn câu & Gói đề/i }));
+    expect(screen.getByText('Gói tủ 3 câu')).toBeInTheDocument();
+    expect(screen.getByText(/Gói đề thi thử đã lưu \(1\)/i)).toBeInTheDocument();
+  });
 });
